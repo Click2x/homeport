@@ -62,4 +62,4 @@ node wire.mjs down   # stop (volumes kept)
 
 ## License
 
-Not chosen yet. Until a license file is added, all rights are reserved. A license will be picked before the first release.
+[GNU AGPL-3.0](LICENSE). If you run a modified version of Homeport as a network service, you must offer its source to the users of that service.

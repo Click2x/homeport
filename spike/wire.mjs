@@ -419,16 +419,25 @@ function fail(msg) {
 }
 
 async function portsInUse(ports) {
-  const { createServer } = await import("node:net");
-  const busy = [];
-  for (const p of ports) {
-    await new Promise((resolve) => {
+  const { createServer, connect } = await import("node:net");
+  // A port is busy if something already answers on loopback (Docker publishes there on Windows
+  // without blocking a bind) or if we cannot bind it ourselves.
+  const answers = (p) =>
+    new Promise((resolve) => {
+      const s = connect({ port: p, host: "127.0.0.1" });
+      s.setTimeout(1000, () => { s.destroy(); resolve(false); });
+      s.once("connect", () => { s.destroy(); resolve(true); });
+      s.once("error", () => resolve(false));
+    });
+  const canBind = (p) =>
+    new Promise((resolve) => {
       const srv = createServer();
-      srv.once("error", () => { busy.push(p); resolve(); });
-      srv.once("listening", () => srv.close(() => resolve()));
+      srv.once("error", () => resolve(false));
+      srv.once("listening", () => srv.close(() => resolve(true)));
       srv.listen(p, "0.0.0.0");
     });
-  }
+  const busy = [];
+  for (const p of ports) if ((await answers(p)) || !(await canBind(p))) busy.push(p);
   return busy;
 }
 
@@ -476,7 +485,12 @@ if (!inside) {
   await preflight();
   log(`pulling and starting containers${vpnOn ? " (qBittorrent behind gluetun VPN)" : " (no VPN configured)"}...`);
   docker("compose", ...files(vpnOn), "pull", "--quiet");
-  docker("compose", ...files(vpnOn), "up", "-d", "--remove-orphans");
+  try {
+    docker("compose", ...files(vpnOn), "up", "-d", "--remove-orphans");
+  } catch (e) {
+    const tail = String(e.stderr ?? e.message).trim().split("\n").slice(-6).join("\n");
+    fail(`Docker could not start the stack:\n${tail}\nA common cause is a port already in use (see the PORT_* settings in spike/example.env).`);
+  }
 
   hardlinkCheck();
   docker(

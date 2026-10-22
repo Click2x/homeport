@@ -21,7 +21,7 @@ services:
       SERVER_COUNTRIES: ${SERVER_COUNTRIES:-}
       # Let the other containers reach the qBittorrent web UI through the tunnel container.
       FIREWALL_INPUT_PORTS: "8080"
-    ports: ["18080:8080"]
+    ports: ["${PORT_QBIT:-18080}:8080"]
 
   qbittorrent:
     network_mode: "service:gluetun"

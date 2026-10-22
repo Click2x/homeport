@@ -52,15 +52,36 @@ Design notes: [`docs/DESIGN.md`](docs/DESIGN.md). Experience notes: [`docs/UX.md
 - Homeport does **not** bundle or recommend indexers or content sources. You are responsible for what you download and for following the laws that apply to you.
 - The app will hold access to the Docker socket, which is root-equivalent, so authentication and a security review are required before any 1.0.
 
-## Trying the spike
+## Quick start (the spike)
 
-Needs Docker Desktop and Node 22+. It starts real containers and downloads several GB of images, on host ports 1xxxx so it does not collide with an existing stack.
+You need **Docker** (Docker Desktop on Windows or macOS, or Docker Engine with Compose v2 on Linux) and **Node 20 or newer** (tested on 22). Nothing else.
 
 ```bash
-cd spike
-node wire.mjs up     # deploy and wire everything
-node wire.mjs down   # stop (volumes kept)
+git clone https://github.com/Click2x/homeport.git
+cd homeport/spike
+node wire.mjs up
 ```
+
+The first run downloads several GB of images and takes a few minutes. When it finishes it prints where to open each service. Jellyfin has an admin user `homeport`; its password, and qBittorrent's, are in `spike/.env` (generated for you; never committed).
+
+| Command | What it does |
+|---|---|
+| `node wire.mjs up` | Deploy and wire everything. Safe to run again; it changes nothing that is already set up. |
+| `node wire.mjs down` | Stop the stack. Your data is kept. |
+| `node wire.mjs reset --yes` | Stop the stack **and delete its data** for a fresh start. |
+| `node wire.mjs vpn-test` | Re-run the VPN kill-switch check. |
+
+**What it uses:** host ports 19696 (Prowlarr), 18989 (Sonarr), 17878 (Radarr), 18080 (qBittorrent), 18096 (Jellyfin) and 15055 (Seerr), chosen so they do not collide with a normal install. Change them, or run a second copy, with the settings in [`spike/example.env`](spike/example.env).
+
+**Using a VPN for qBittorrent:** copy `spike/example.env` to `spike/.env`, set your provider details, and run `node wire.mjs up`. The VPN overlay turns on and the run ends with a kill-switch check. Do this before you add any download sources.
+
+**Tested with** (images use `latest` tags, so newer releases may behave differently): Prowlarr 2.6.5, Sonarr 4.0.20, Radarr 6.4.4, qBittorrent 5.2.4, Jellyfin 12.2, Seerr 3.5.0, Recyclarr 8.8.0, on Docker Desktop for Windows. Linux and macOS are not tested yet.
+
+**If something goes wrong**
+- *"Docker is not running"*: start Docker Desktop, then retry.
+- *"Ports already in use"*: another program uses one of the ports above; change it in `spike/.env`.
+- *qBittorrent login problems*: qBittorrent bans an address after several bad logins. Restart its container and run `node wire.mjs up` again.
+- Anything else: open an issue with the output of `node wire.mjs up` (it does not print your keys).
 
 ## License
 

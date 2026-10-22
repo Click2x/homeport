@@ -1,7 +1,7 @@
 ﻿# Homeport spike: headless deploy of the core arr stack.
 # API keys are injected via env (never scraped from config.xml).
 # The spike uses one named volume as the single /data root so hardlinks work.
-name: homeport-spike
+name: ${HP_PROJECT:-homeport-spike}
 
 x-common: &common
   restart: unless-stopped
@@ -17,7 +17,7 @@ services:
     environment:
       <<: *common-env
       PROWLARR__AUTH__APIKEY: ${PROWLARR_KEY}
-    ports: ["19696:9696"]
+    ports: ["${PORT_PROWLARR:-19696}:9696"]
     volumes: ["prowlarr-config:/config"]
 
   sonarr:
@@ -26,7 +26,7 @@ services:
     environment:
       <<: *common-env
       SONARR__AUTH__APIKEY: ${SONARR_KEY}
-    ports: ["18989:8989"]
+    ports: ["${PORT_SONARR:-18989}:8989"]
     volumes: ["sonarr-config:/config", "data:/data"]
 
   radarr:
@@ -35,7 +35,7 @@ services:
     environment:
       <<: *common-env
       RADARR__AUTH__APIKEY: ${RADARR_KEY}
-    ports: ["17878:7878"]
+    ports: ["${PORT_RADARR:-17878}:7878"]
     volumes: ["radarr-config:/config", "data:/data"]
 
   qbittorrent:
@@ -44,13 +44,13 @@ services:
     environment:
       <<: *common-env
       WEBUI_PORT: "8080"
-    ports: ["18080:8080"]
+    ports: ["${PORT_QBIT:-18080}:8080"]
     volumes: ["qbittorrent-config:/config", "data:/data"]
 
   jellyfin:
     <<: *common
     image: lscr.io/linuxserver/jellyfin:latest
-    ports: ["18096:8096"]
+    ports: ["${PORT_JELLYFIN:-18096}:8096"]
     volumes: ["jellyfin-config:/config", "data:/data"]
 
   seerr:
@@ -59,7 +59,7 @@ services:
     restart: unless-stopped
     environment:
       TZ: ${TZ:-UTC}
-    ports: ["15055:5055"]
+    ports: ["${PORT_SEERR:-15055}:5055"]
     volumes: ["seerr-config:/app/config"]
 
 volumes:

@@ -1,5 +1,5 @@
 ﻿// Homeport spike: deploy + auto-wire the core arr stack, headless and idempotent.
-// Usage: node wire.mjs [up|down]   (no dependencies, Node 22+)
+// Usage: node wire.mjs [up|down|reset|vpn-test]   (no dependencies, Node 20+; tested on 22)
 import { execFileSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -7,12 +7,19 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const dir = dirname(fileURLToPath(import.meta.url));
+// Docker Compose project name. Override (HP_PROJECT) to run a second copy side by side.
+const PROJECT = process.env.HP_PROJECT ?? "homeport-spike";
 const envPath = join(dir, ".env");
 // Inside mode: this script runs in a container on the stack network and uses service names.
 const inside = process.env.HP_INSIDE === "1";
-const U = inside
-  ? { qbit: process.env.HP_VPN === "1" ? "http://gluetun:8080" : "http://qbittorrent:8080", sonarr: "http://sonarr:8989", radarr: "http://radarr:7878", prowlarr: "http://prowlarr:9696", jellyfin: "http://jellyfin:8096", seerr: "http://seerr:5055" }
-  : { qbit: "http://localhost:18080", sonarr: "http://localhost:18989", radarr: "http://localhost:17878", prowlarr: "http://localhost:19696", jellyfin: "http://localhost:18096", seerr: "http://localhost:15055" };
+const U = {
+  qbit: process.env.HP_VPN === "1" ? "http://gluetun:8080" : "http://qbittorrent:8080",
+  sonarr: "http://sonarr:8989",
+  radarr: "http://radarr:7878",
+  prowlarr: "http://prowlarr:9696",
+  jellyfin: "http://jellyfin:8096",
+  seerr: "http://seerr:5055",
+}; // only used inside the helper container, on the stack network
 const log = (m) => console.log(`[homeport] ${m}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const docker = (...args) =>
@@ -311,7 +318,7 @@ function recyclarrSync(env) {
   );
   execFileSync(
     "docker",
-    ["run", "--rm", "--network", "homeport-spike_default", "-v", `${cfgDir}:/config`, "ghcr.io/recyclarr/recyclarr:8", "sync"],
+    ["run", "--rm", "--network", `${PROJECT}_default`, "-v", `${cfgDir}:/config`, "ghcr.io/recyclarr/recyclarr:8", "sync"],
     { stdio: "inherit" },
   );
   log("Recyclarr: TRaSH quality profiles synced");
@@ -320,8 +327,8 @@ function recyclarrSync(env) {
 // ---- VPN kill switch / leak check -------------------------------------------------
 // Runs from the host. Everything qBittorrent sends leaves through gluetun's namespace.
 // Override to point the check at another stack, e.g. HP_GLUETUN=gluetun HP_QBIT=qbittorrent
-const GLUETUN = process.env.HP_GLUETUN ?? "homeport-spike-gluetun-1";
-const QBIT = process.env.HP_QBIT ?? "homeport-spike-qbittorrent-1";
+const GLUETUN = process.env.HP_GLUETUN ?? `${PROJECT}-gluetun-1`;
+const QBIT = process.env.HP_QBIT ?? `${PROJECT}-qbittorrent-1`;
 
 async function hostPublicIp() {
   const res = await fetch("https://api.ipify.org");
@@ -383,7 +390,7 @@ async function vpnCheck({ breakTunnel = false } = {}) {
 // ---- storage check (first piece of the future "storage checker") ------------
 function hardlinkCheck() {
   const out = docker(
-    "run", "--rm", "-v", "homeport-spike_data:/data", "alpine",
+    "run", "--rm", "-v", `${PROJECT}_data:/data`, "alpine",
     "sh", "-c",
     "mkdir -p /data/.hp && echo x > /data/.hp/a && ln -f /data/.hp/a /data/.hp/b && stat -c %h /data/.hp/a && rm -rf /data/.hp",
   );
@@ -406,6 +413,57 @@ const env = inside ? Object.fromEntries(KEYS.map((k) => [k, process.env[k]])) : 
 // The VPN overlay is on whenever a VPN provider is configured in .env.
 const vpnOn = Boolean(env.VPN_SERVICE_PROVIDER);
 
+function fail(msg) {
+  console.error(`[homeport] ${msg}`);
+  process.exit(1);
+}
+
+async function portsInUse(ports) {
+  const { createServer } = await import("node:net");
+  const busy = [];
+  for (const p of ports) {
+    await new Promise((resolve) => {
+      const srv = createServer();
+      srv.once("error", () => { busy.push(p); resolve(); });
+      srv.once("listening", () => srv.close(() => resolve()));
+      srv.listen(p, "0.0.0.0");
+    });
+  }
+  return busy;
+}
+
+async function preflight() {
+  if (Number(process.versions.node.split(".")[0]) < 20) fail(`Node 20 or newer is required (you have ${process.versions.node}).`);
+  try { docker("version", "--format", "{{.Server.Version}}"); }
+  catch { fail("Docker is not running or not installed. Start Docker Desktop (or the Docker service) and try again."); }
+  try { docker("compose", "version"); }
+  catch { fail("Docker Compose v2 is required ('docker compose' did not work)."); }
+  // Only check ports when this project is not already running (its own containers hold them).
+  const running = docker("compose", ...files(vpnOn), "ps", "-q").trim();
+  if (!running) {
+    const wanted = ["PORT_PROWLARR:19696", "PORT_SONARR:18989", "PORT_RADARR:17878", "PORT_QBIT:18080", "PORT_JELLYFIN:18096", "PORT_SEERR:15055"]
+      .map((x) => { const [k, d] = x.split(":"); return Number(process.env[k] ?? env[k] ?? d); });
+    const busy = await portsInUse(wanted);
+    if (busy.length) fail(`These ports are already in use: ${busy.join(", ")}. Free them, or set PORT_PROWLARR, PORT_SONARR, PORT_RADARR, PORT_QBIT, PORT_JELLYFIN and PORT_SEERR in spike/.env.`);
+  }
+}
+
+if (cmd === "reset") {
+  if (!process.argv.includes("--yes")) {
+    console.log(
+      [
+        "This stops the stack and DELETES its volumes: all app settings, the Jellyfin library database",
+        "and anything in the data volume (including downloads). Your .env (generated keys) is kept.",
+        "Run again with --yes to confirm:  node wire.mjs reset --yes",
+      ].join("\n"),
+    );
+    process.exit(0);
+  }
+  docker("compose", ...files(true), "down", "-v", "--remove-orphans");
+  log("stack and volumes removed. Run 'node wire.mjs up' for a fresh start.");
+  process.exit(0);
+}
+
 if (cmd === "vpn-test") {
   // Standalone kill switch check against the running stack. --break-tunnel also drops the tunnel briefly.
   const ok = await vpnCheck({ breakTunnel: process.argv.includes("--break-tunnel") });
@@ -415,32 +473,34 @@ if (cmd === "vpn-test") {
 if (!inside) {
   // Outer phase (host): start the stack, check storage, then run the wiring from a
   // container on the stack network, the same place Homeport itself will live.
+  await preflight();
   log(`pulling and starting containers${vpnOn ? " (qBittorrent behind gluetun VPN)" : " (no VPN configured)"}...`);
   docker("compose", ...files(vpnOn), "pull", "--quiet");
   docker("compose", ...files(vpnOn), "up", "-d", "--remove-orphans");
 
   hardlinkCheck();
   docker(
-    "run", "--rm", "-v", "homeport-spike_data:/data", "alpine",
+    "run", "--rm", "-v", `${PROJECT}_data:/data`, "alpine",
     "sh", "-c", "mkdir -p /data/torrents /data/media/tv /data/media/movies && chown -R 1000:1000 /data",
   );
 
   // qBittorrent prints a one-time admin password (to stderr) on each start.
   let temp = "";
   for (let i = 0; i < 30 && !temp; i++) {
-    const r = spawnSync("docker", ["logs", "homeport-spike-qbittorrent-1"], { encoding: "utf8" });
+    const r = spawnSync("docker", ["logs", `${PROJECT}-qbittorrent-1`], { encoding: "utf8" });
     temp = [...`${r.stdout}${r.stderr}`.matchAll(/temporary password[^:]*:\s*(\S+)/gi)].pop()?.[1] ?? "";
     if (!temp) await sleep(2000);
   }
   // Only the keys the wiring needs go into the helper container (never the VPN credentials).
-  const passEnv = Object.entries({ ...Object.fromEntries(KEYS.map((k) => [k, env[k] ?? ""])), HP_QBIT_TEMP: temp, HP_VPN: vpnOn ? "1" : "0" })
-    .flatMap(([k, v]) => ["-e", `${k}=${v}`]);
+  const passVals = { ...Object.fromEntries(KEYS.map((k) => [k, env[k] ?? ""])), HP_QBIT_TEMP: temp, HP_VPN: vpnOn ? "1" : "0" };
+  // `-e NAME` (no value) makes docker read it from our environment, so keys never appear in a command line or error.
+  const passEnv = Object.keys(passVals).flatMap((k) => ["-e", k]);
   const inner = (phase) =>
     execFileSync(
       "docker",
-      ["run", "--rm", "--network", "homeport-spike_default", "-v", `${dir}:/work:ro`, "-w", "/work",
+      ["run", "--rm", "--network", `${PROJECT}_default`, "-v", `${dir}:/work:ro`, "-w", "/work",
         "-e", "HP_INSIDE=1", ...passEnv, "node:22-alpine", "node", "wire.mjs", phase],
-      { stdio: "inherit" },
+      { stdio: "inherit", env: { ...process.env, ...passVals } },
     );
   inner("wire");
   recyclarrSync(env); // needs Sonarr/Radarr up, and must run before Seerr picks a quality profile
@@ -450,7 +510,14 @@ if (!inside) {
     process.exit(1);
   }
   log("done. Re-run `node wire.mjs` to prove idempotency (should add nothing).");
-  log("Prowlarr http://localhost:19696  Sonarr :18989  Radarr :17878  qBittorrent :18080  Jellyfin :18096");
+  const port = (k, d) => process.env[k] ?? env[k] ?? d;
+  log("Open these in your browser:");
+  log(`  Jellyfin     http://localhost:${port("PORT_JELLYFIN", 18096)}   (user "homeport", password in .env as JELLYFIN_PASS)`);
+  log(`  Seerr        http://localhost:${port("PORT_SEERR", 15055)}   (sign in with the Jellyfin user)`);
+  log(`  Sonarr       http://localhost:${port("PORT_SONARR", 18989)}`);
+  log(`  Radarr       http://localhost:${port("PORT_RADARR", 17878)}`);
+  log(`  Prowlarr     http://localhost:${port("PORT_PROWLARR", 19696)}   (add your own indexers here)`);
+  log(`  qBittorrent  http://localhost:${port("PORT_QBIT", 18080)}   (user "admin", password in .env as QBIT_PASS)`);
   process.exit(0);
 }
 

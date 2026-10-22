@@ -4,6 +4,8 @@
 
 Homeport is an open-source project that aims to take a complete beginner from "I have Docker Desktop" to a working Sonarr + Radarr + Prowlarr + qBittorrent (behind a VPN) + Jellyfin + Seerr setup, with no YAML and no copying API keys between apps. Advanced users get an Advanced mode and an exportable compose file.
 
+Homeport is a **standalone product**: it needs no account, no cloud service and no other software besides Docker. The guided experience is described in [`docs/UX.md`](docs/UX.md).
+
 > ## Status: early prototype. There is no app yet.
 >
 > What exists today is a **headless proof of concept** (the "spike") that shows the hard part works. There is **no web UI, no installer and no released version**. Do not expect to install Homeport yet.
@@ -43,7 +45,7 @@ See [`spike/`](spike/). The spike keeps its generated secrets in a git-ignored `
 5. Optional extra services (Home Assistant, Pi-hole, Vaultwarden, Nextcloud and others) as community-extensible manifests.
 6. Linux support through a small platform adapter.
 
-Design notes: [`docs/DESIGN.md`](docs/DESIGN.md).
+Design notes: [`docs/DESIGN.md`](docs/DESIGN.md). Experience notes: [`docs/UX.md`](docs/UX.md).
 
 ## Ground rules
 

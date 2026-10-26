@@ -54,7 +54,7 @@ The real app is being built as a TypeScript monorepo under [`packages/`](package
 | Package | What it holds |
 |---|---|
 | `@homeport/core` | The app manifest schema, the catalog of services (`manifests/*.yaml`) and the goals that select them |
-| `@homeport/engine` | Turns a plan into a Docker Compose project (storage modes, VPN routing, generated-key placeholders) and runs the Docker side: deploy, first-run checks, Recyclarr |
+| `@homeport/engine` | Turns a plan into a Docker Compose project (storage modes, VPN routing, generated-key placeholders) and runs the Docker side: deploy, storage checker and tiers, the VPN gate and kill-switch check, `homeport.toml`, Recyclarr |
 | `@homeport/connectors` | Typed, idempotent wiring for Sonarr, Radarr, Prowlarr, qBittorrent, Jellyfin and Seerr |
 
 ```bash
@@ -63,6 +63,7 @@ npm test           # unit tests, no Docker needed (wiring runs against in-memory
 npm run typecheck  # tsc -b
 npm run lint       # Biome
 npm run e2e        # deploys a real stack, wires it, wires it again, tears it down (needs Docker; downloads images)
+npm run e2e:vpn    # proves the download client has no internet when its VPN is down (needs Docker)
 ```
 
 A manifest is a short YAML file, so adding a service to the catalog needs no code. The engine's output is checked against the spike's known-good compose file, and the end-to-end test proves the TypeScript wiring against real containers (second run changes nothing).
@@ -71,6 +72,8 @@ A manifest is a short YAML file, so adding a service to the catalog needs no cod
 
 - Homeport does **not** bundle or recommend indexers or content sources. You are responsible for what you download and for following the laws that apply to you.
 - The app will hold access to the Docker socket, which is root-equivalent, so authentication and a security review are required before any 1.0.
+- **Downloads and VPNs.** The download client only starts behind a VPN that Homeport has verified. The only way to run without one is to set `allow_unprotected = true` in `homeport.toml` by hand; there is no button for it. If the VPN drops, the gateway's firewall stops the client's traffic instead of letting it leak (proven by a test that attaches a client to a tunnel that cannot connect).
+- **Outside calls.** Besides pulling images, the only thing Homeport contacts on its own is a public-address lookup (`api.ipify.org` by default) during the VPN check, to confirm your downloads do not leave from your home address. No telemetry.
 
 ## Quick start (the spike)
 

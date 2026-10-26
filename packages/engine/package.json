@@ -5,11 +5,21 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist"],
-  "scripts": { "build": "tsc -b" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
   "dependencies": {
     "@homeport/core": "0.0.0",
-    "yaml": "^2.9.1"
+    "yaml": "^2.9.1",
+    "smol-toml": "^1.9.1"
   }
 }

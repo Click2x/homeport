@@ -9,6 +9,11 @@ export interface Plan {
   apps: string[];
   /** Route apps that need a VPN through the gateway. */
   vpn: boolean;
+  /**
+   * Selected apps that must not start yet, for example the download client until the VPN has been
+   * verified. They stay in the plan (the gateway is still deployed so it can be checked).
+   */
+  hold?: string[];
   /** appId -> port name -> host port. Anything missing uses the app's own port. */
   hostPorts?: Record<string, Record<string, number>>;
   timezone: string;
@@ -25,10 +30,17 @@ export function isRouted(plan: Plan, app: AppManifest): boolean {
   return plan.vpn && app.vpn === "required";
 }
 
+/** Every selected app that goes behind the gateway, whether or not it is being held back right now. */
+export function routedApps(catalog: Catalog, plan: Plan): AppManifest[] {
+  return resolveApps(catalog, plan.apps).filter((a) => a.id !== GATEWAY_ID && isRouted(plan, a));
+}
+
 /** The apps to run, in start order, including dependencies and (when needed) the gateway. */
 export function expandPlan(catalog: Catalog, plan: Plan): AppManifest[] {
-  const apps = resolveApps(catalog, plan.apps).filter((a) => a.id !== GATEWAY_ID);
-  if (apps.some((a) => isRouted(plan, a))) {
+  const all = resolveApps(catalog, plan.apps).filter((a) => a.id !== GATEWAY_ID);
+  const apps = all.filter((a) => !plan.hold?.includes(a.id));
+  // The gateway runs as soon as something needs it, even if that app is held, so it can be verified first.
+  if (all.some((a) => isRouted(plan, a))) {
     const gateway = catalog.apps.get(GATEWAY_ID);
     if (!gateway) throw new Error("the catalog has no VPN gateway app");
     apps.unshift(gateway);

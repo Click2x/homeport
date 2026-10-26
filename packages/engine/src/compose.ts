@@ -1,6 +1,6 @@
 import type { AppManifest, Catalog } from "@homeport/core";
 import { stringify } from "yaml";
-import { expandPlan, GATEWAY_ID, hostPort, isRouted, keyVar, type Plan } from "./plan.js";
+import { expandPlan, GATEWAY_ID, hostPort, isRouted, keyVar, type Plan, routedApps } from "./plan.js";
 
 export interface ComposeService {
   image: string;
@@ -27,7 +27,8 @@ const portString = (host: number, container: number, protocol?: string) =>
 /** Build the Docker Compose project for a plan. Secrets are ${VAR} references, never literal values. */
 export function generateCompose(catalog: Catalog, plan: Plan): ComposeFile {
   const apps = expandPlan(catalog, plan);
-  const routed = apps.filter((a) => isRouted(plan, a));
+  // Ports the gateway opens and publishes come from every app that belongs behind it, even a held one.
+  const routed = routedApps(catalog, plan);
   const services: Record<string, ComposeService> = {};
   const volumes: Record<string, null> = {};
   const dataSource = plan.data.mode === "bind" ? plan.data.source : "data";

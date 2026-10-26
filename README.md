@@ -65,6 +65,7 @@ npm run typecheck  # tsc -b
 npm run lint       # Biome
 npm run e2e        # deploys a real stack, wires it, wires it again, tears it down (needs Docker; downloads images)
 npm run e2e:vpn    # proves the download client has no internet when its VPN is down (needs Docker)
+npm run e2e:server # builds the image and drives the whole app through its API on real Docker (needs Docker; downloads images)
 ```
 
 A manifest is a short YAML file, so adding a service to the catalog needs no code. The engine's output is checked against the spike's known-good compose file, and the end-to-end test proves the TypeScript wiring against real containers (second run changes nothing).

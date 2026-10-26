@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.git
+.agent-board
+.homeport-data
+.e2e
+spike
+docs
+scripts
+*.md
+.env*

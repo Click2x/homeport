@@ -17,6 +17,8 @@
     "lint": "biome check .",
     "e2e": "npm run build && node scripts/e2e.mjs",
     "e2e:vpn": "npm run build && node scripts/e2e-vpn.mjs",
+    "docker:build": "docker build -t homeport:dev .",
+    "e2e:server": "npm run docker:build && node scripts/e2e-server.mjs",
     "format": "biome check --write ."
   },
   "devDependencies": {

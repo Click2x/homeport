@@ -97,6 +97,13 @@ describe("holding an app back", () => {
     expect(c.services.sonarr).toBeDefined();
   });
 
+  it("leaves the gateway out too when it is held (no VPN settings yet)", () => {
+    const c = generateCompose(catalog, { ...plan, hold: ["qbittorrent", "gluetun"] });
+    expect(c.services.gluetun).toBeUndefined();
+    expect(c.services.qbittorrent).toBeUndefined();
+    expect(c.services.sonarr).toBeDefined();
+  });
+
   it("keeps the gateway's published ports and firewall opening stable while the client is held", () => {
     const held = generateCompose(catalog, plan).services.gluetun;
     const running = generateCompose(catalog, { ...plan, hold: [] }).services.gluetun;

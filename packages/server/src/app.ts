@@ -84,6 +84,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   await app.register(fastifyCookie);
 
+  // Browsers (and our own scripts) often send "Content-Type: application/json" with no body for actions
+  // like "deploy". Treat that as an empty object instead of an error.
+  app.addContentTypeParser("application/json", { parseAs: "string" }, (_req, body, done) => {
+    if (!body || !String(body).trim()) return done(null, {});
+    try {
+      done(null, JSON.parse(String(body)));
+    } catch {
+      done(Object.assign(new Error("The request was not valid JSON."), { statusCode: 400 }), undefined);
+    }
+  });
+
   app.addHook("onSend", async (_req, reply) => {
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Frame-Options", "DENY");

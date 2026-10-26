@@ -160,8 +160,9 @@ describe("deploy", () => {
     expect(f.wired[0]?.selected).not.toContain("qbittorrent");
     expect(f.wired[0]?.selected).toContain("sonarr");
     expect(job.events.some((e) => e.status === "warn" && /add your VPN settings/.test(e.message))).toBe(true);
-    // The client was never written into the compose file, so it cannot have started.
-    expect(f.calls.filter((c) => c.startsWith("write")).every((c) => !c.includes("+client"))).toBe(true);
+    // Neither the client nor the gateway was written into the compose file, so neither can have started.
+    expect(f.calls.filter((c) => c.startsWith("write")).every((c) => c === "write:plain")).toBe(true);
+    expect(job.events.some((e) => e.step === "vpn" && /No VPN is set up yet/.test(e.message))).toBe(true);
   });
 
   it("starts the download client only after the gateway is verified, then checks it again", async () => {
@@ -279,6 +280,32 @@ describe("deploy", () => {
     await deployAndWait(t);
     const actions = (await t.me.get("/api/audit")).json().entries.map((e: { action: string }) => e.action);
     expect(actions).toEqual(expect.arrayContaining(["deploy", "settings", "setup"]));
+  });
+});
+
+describe("request bodies", () => {
+  it("accepts an action with a JSON content-type and no body", async () => {
+    const t = await ready();
+    await t.me.put("/api/settings", WATCH);
+    const res = await t.app.inject({
+      method: "POST",
+      url: "/api/deploy",
+      headers: { ...t.H, cookie: t.cookie, "content-type": "application/json" },
+    });
+    expect(res.statusCode).toBe(202);
+    await t.finish(t.cookie, res.json().jobId);
+  });
+
+  it("answers broken JSON with a plain message, not a stack trace", async () => {
+    const t = await ready();
+    const res = await t.app.inject({
+      method: "PUT",
+      url: "/api/settings",
+      headers: { ...t.H, cookie: t.cookie, "content-type": "application/json" },
+      payload: "{not json",
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/not valid JSON/);
   });
 });
 

@@ -134,7 +134,9 @@ export async function deploy(
   report.start("plan", "Choosing ports and preparing the plan");
   const hostPorts = allocatePorts(catalog, apps, await ops.takenPorts(settings.project), settings.hostPorts);
   store.setJson(SETTINGS_KEY, { ...settings, hostPorts });
-  let plan = buildPlan(settings, apps, { vpn: decision.vpn, hold: decision.hold, hostPorts });
+  // Without VPN settings the gateway has nothing to connect to, so it stays off too.
+  const initialHold = decision.vpn && !vpnConfigured(store) ? [...decision.hold, "gluetun"] : decision.hold;
+  let plan = buildPlan(settings, apps, { vpn: decision.vpn, hold: initialHold, hostPorts });
   const project = projectOf(deps.dataDir, settings.project);
   const location: DataLocation =
     settings.data.mode === "bind" ? settings.data : { mode: "volume", project: settings.project };
@@ -176,7 +178,12 @@ export async function deploy(
 
   // ---- the VPN gate ----
   let held = [...decision.hold];
-  if (decision.vpn) {
+  if (decision.vpn && !vpnConfigured(store)) {
+    report.info(
+      "vpn",
+      "No VPN is set up yet, so downloads stay off. Add your VPN settings and deploy again.",
+    );
+  } else if (decision.vpn) {
     report.start("vpn", "Checking your VPN");
     const verify = async (): Promise<VpnReport> => {
       let last = await ops.checkVpn(settings.project);

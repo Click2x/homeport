@@ -40,7 +40,8 @@ export function expandPlan(catalog: Catalog, plan: Plan): AppManifest[] {
   const all = resolveApps(catalog, plan.apps).filter((a) => a.id !== GATEWAY_ID);
   const apps = all.filter((a) => !plan.hold?.includes(a.id));
   // The gateway runs as soon as something needs it, even if that app is held, so it can be verified first.
-  if (all.some((a) => isRouted(plan, a))) {
+  // ...unless the gateway itself is held (for example, no VPN settings exist yet, so it could not connect).
+  if (all.some((a) => isRouted(plan, a)) && !plan.hold?.includes(GATEWAY_ID)) {
     const gateway = catalog.apps.get(GATEWAY_ID);
     if (!gateway) throw new Error("the catalog has no VPN gateway app");
     apps.unshift(gateway);

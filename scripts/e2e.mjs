@@ -17,9 +17,10 @@ import {
   composeToYaml,
   composeUp,
   generateCompose,
-  initDataVolume,
+  checkStorage,
   keyVar,
   networkName,
+  prepareStorage,
   readQbitFirstRunPassword,
   runRecyclarr,
   writeProject,
@@ -66,7 +67,12 @@ try {
   say("pulling images (first run downloads several GB)...");
   await composePull(proj);
   await composeUp(proj);
-  await initDataVolume(project, plan.puid, plan.pgid);
+  const location = { mode: "volume", project };
+  const owner = { puid: plan.puid, pgid: plan.pgid };
+  await prepareStorage(location, owner);
+  const storage = await checkStorage(location, owner);
+  check("storage check finds no failures", storage.results.every((r) => r.status !== "fail"), storage.tier);
+  check("storage links files instead of copying", !storage.copyMode, `${storage.measured.fsType}, ${Math.round(storage.measured.writeMBps ?? 0)} MB/s`);
   const first = await readQbitFirstRunPassword(project);
   check("qBittorrent printed its one-time password", Boolean(first));
 

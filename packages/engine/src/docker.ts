@@ -89,20 +89,6 @@ export const containerName = (project: string, service: string) => `${project}-$
 export const networkName = (project: string) => `${project}_default`;
 export const dataVolumeName = (project: string) => `${project}_data`;
 
-/** Create the folders Sonarr and Radarr expect, owned by the user the apps run as. */
-export async function initDataVolume(project: string, puid: number, pgid: number): Promise<void> {
-  await docker([
-    "run",
-    "--rm",
-    "-v",
-    `${dataVolumeName(project)}:/data`,
-    "alpine",
-    "sh",
-    "-c",
-    `mkdir -p /data/torrents /data/media/tv /data/media/movies && chown -R ${Number(puid)}:${Number(pgid)} /data`,
-  ]);
-}
-
 /** A fresh qBittorrent prints a one-time admin password (to stderr). Wait for it to appear. */
 export async function readQbitFirstRunPassword(
   project: string,

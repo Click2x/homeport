@@ -18,7 +18,19 @@ Bind-mounting NTFS into Linux containers is slow and its hardlink behavior is un
 - Safety: a sentinel file refuses to start downloaders if the media drive is not mounted.
 
 ## Storage checker
-Hardlink test, same-filesystem check, atomic rename, throughput, inotify, permissions/PUID, free space, host path mapping, config-on-bind-mount, VHDX size. Each failure gets a plain-language explanation and an automatic or guided fix.
+Implemented in `@homeport/engine` (`checkStorage`). A throwaway container mounts exactly what the stack will mount and measures: hardlinks, atomic rename, whether downloads and library share a drive, write speed, whether the apps' own user can write, free space and filesystem type. Each result has a plain-language explanation, and failures carry an automatic or guided fix. Tiers: **best** (native Linux filesystem on a folder you control), **good**, **compatible** (copy mode), **blocked**.
+
+Not checked yet: inotify (files added from outside Docker being noticed), the "drive not mounted" sentinel, and VHDX size.
+
+**What we measured** (one machine, Docker Desktop on Windows 11, October 2026; yours may differ, which is why Homeport measures instead of assuming):
+
+| Location | Hardlinks | Atomic rename | Write speed |
+|---|---|---|---|
+| Docker named volume (ext4 inside Docker's disk) | works | works | ~1,400 MB/s |
+| NTFS folder on the system drive, bind-mounted | works | works | ~105 MB/s |
+| NTFS folder on a second internal drive, bind-mounted | works | works | ~183 MB/s |
+
+So on this setup NTFS hardlinks work, contrary to our earlier assumption, but the shared-drive path is roughly 10x slower than Docker's own storage. A fresh Docker volume is owned by root, so apps cannot write until `prepareStorage` hands the folders to the apps' user (which is also the automatic permission fix).
 
 ## Remote access
 - Built-in WireGuard in a dedicated sidecar, with QR-code peers. One peer per person, revocable, expiring invites, firewall-scoped to chosen services.

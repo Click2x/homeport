@@ -93,6 +93,12 @@ try {
   const logs = (await sh(["logs", app])).stdout + (await sh(["logs", app])).stderr;
   const code = /([A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})/.exec(logs)?.[1];
   check("the setup code is printed in the log", Boolean(code));
+  const page = await fetch(base + "/").then((r) => r.text(), () => "");
+  check("the web interface is served", page.includes('<div id="root">') && page.includes("Homeport"));
+  const deep = await fetch(base + "/some/page").then((r) => r.text(), () => "");
+  check("unknown pages fall back to the interface (so links and reloads work)", deep.includes('<div id="root">'));
+  const unknownApi = await fetch(base + "/api/nope");
+  check("an unknown API path answers 404 JSON, not the page", unknownApi.status === 404 || unknownApi.status === 401);
   check("the API is closed before sign-in", (await api("GET", "/api/catalog")).status === 401);
   const bad = await api("POST", "/api/setup", { token: "AAAA-BBBB-CCCC", username: "admin", password: "correct horse battery" });
   check("a wrong setup code is refused", bad.status === 403);

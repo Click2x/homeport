@@ -158,7 +158,6 @@ export async function deploy(
 
   // ---- storage ----
   report.start("storage", "Checking where your library will live");
-  await ops.prepareStorage(location, owner);
   const storage = await ops.checkStorage(location, owner);
   const failed = storage.results.filter((r) => r.status === "fail");
   if (storage.tier === "blocked")

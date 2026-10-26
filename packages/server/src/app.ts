@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import fastifyCookie from "@fastify/cookie";
+import fastifyStatic from "@fastify/static";
 import type { Catalog } from "@homeport/core";
 import {
   CONFIG_TEMPLATE,
@@ -274,7 +275,6 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     const owner = { puid: s.puid, pgid: s.pgid };
     const problem = await ops.checkDocker();
     if (problem) throw new UserError(problem);
-    await ops.prepareStorage(locationOf(), owner);
     return ops.checkStorage(locationOf(), owner);
   });
   app.post("/api/storage/fix", { schema: { body: Type.Object({ action: Type.String() }) } }, async (req) => {
@@ -409,6 +409,40 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
 
   app.get("/api/audit", async () => ({ entries: store.recentAudit(50) }));
+
+  // The sign-ins Homeport generated for the apps, so a person can actually use them. Admin only, and logged.
+  app.get("/api/credentials", async (req) => {
+    store.audit(who(req), "credentials-viewed");
+    return {
+      jellyfin: { user: "homeport", password: store.getSecret("jellyfin.password") ?? null },
+      qbittorrent: { user: "admin", password: store.getSecret("qbittorrent.password") ?? null },
+      note: "Seerr: sign in with the Jellyfin user above. Sonarr, Radarr and Prowlarr use keys Homeport manages for you.",
+    };
+  });
+
+  // Re-run the VPN check on demand. It reports only; starting downloads is done by deploying again.
+  app.post("/api/vpn/check", async () => {
+    if (!store.getJson(DEPLOYED_KEY)) throw new UserError("Install your apps first, then check the VPN.");
+    return ops.checkVpn(loadSettings(store).project);
+  });
+
+  // ---- the web interface ----
+  if (deps.webDir && existsSync(join(deps.webDir, "index.html"))) {
+    await app.register(fastifyStatic, {
+      root: deps.webDir,
+      wildcard: false,
+      setHeaders: (res, path) => {
+        res.header(
+          "Cache-Control",
+          path.endsWith("index.html") ? "no-cache" : "public, max-age=31536000, immutable",
+        );
+      },
+    });
+    app.get("/*", async (req, reply) => {
+      if (req.url.startsWith("/api/")) throw new UserError("That does not exist.", 404);
+      return reply.sendFile("index.html");
+    });
+  }
 
   return app;
 }

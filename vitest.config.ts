@@ -13,5 +13,9 @@ export default defineConfig({
       "@homeport/server": src("server"),
     },
   },
-  test: { include: ["packages/*/test/**/*.test.ts"] },
+  // Interface tests opt in to a browser-like environment with `// @vitest-environment jsdom`.
+  test: {
+    include: ["packages/*/test/**/*.test.{ts,tsx}"],
+    setupFiles: ["./vitest.setup.ts"],
+  },
 });

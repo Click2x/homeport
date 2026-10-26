@@ -265,9 +265,16 @@ export const TIER_SUMMARY: Record<Tier, string> = {
 
 // ---- the Docker side ----------------------------------------------------------------------------
 
-/** One short shell script, run in a throwaway container that mounts exactly what the stack will mount. */
-const PROBE_SCRIPT = `
+const APP_DIRS = "/data /data/torrents /data/media /data/media/tv /data/media/movies";
+
+/**
+ * One short shell script, run in a throwaway container that mounts exactly what the stack will mount.
+ * It first creates the folders the apps expect (so a fresh volume is ready), then measures. Starting
+ * containers is the slow part on a busy Docker, so this does both jobs in one.
+ */
+const probeScript = (puid: number, pgid: number) => `
 set -u
+mkdir -p ${APP_DIRS} && chown ${Number(puid)}:${Number(pgid)} ${APP_DIRS} 2>/dev/null
 d=/data/.homeport-check
 rm -rf "$d"; mkdir -p "$d/torrents" "$d/media" && cd "$d" || { echo "error=cannot-write"; exit 0; }
 echo "fstype=$(stat -f -c %T /data)"
@@ -329,7 +336,6 @@ export interface CheckOptions {
  * pointing Homeport at an existing library is safe.
  */
 export async function prepareStorage(location: DataLocation, { puid, pgid }: CheckOptions): Promise<void> {
-  const dirs = "/data /data/torrents /data/media /data/media/tv /data/media/movies";
   await docker([
     "run",
     "--rm",
@@ -338,17 +344,20 @@ export async function prepareStorage(location: DataLocation, { puid, pgid }: Che
     "alpine",
     "sh",
     "-c",
-    `mkdir -p ${dirs} && chown ${Number(puid)}:${Number(pgid)} ${dirs}`,
+    `mkdir -p ${APP_DIRS} && chown ${Number(puid)}:${Number(pgid)} ${APP_DIRS}`,
   ]);
 }
 
-/** Run the storage checks against the place the stack will keep its data. Writes only a temporary folder. */
+/**
+ * Run the storage checks against the place the stack will keep its data. It creates the standard
+ * folders first (never changing files that already exist), then measures using a temporary folder.
+ */
 export async function checkStorage(
   location: DataLocation,
   { puid, pgid }: CheckOptions,
 ): Promise<StorageReport> {
   const mount = mountFor(location);
-  const out = await docker(["run", "--rm", "-v", mount, "alpine", "sh", "-c", PROBE_SCRIPT]);
+  const out = await docker(["run", "--rm", "-v", mount, "alpine", "sh", "-c", probeScript(puid, pgid)]);
   // Can the user the apps run as write here? A separate container, started as that user.
   const asApp = await docker([
     "run",

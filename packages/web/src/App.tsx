@@ -7,13 +7,14 @@ import { DashboardScreen } from "./screens/Dashboard";
 import { GoalsScreen } from "./screens/Goals";
 import { InstallScreen } from "./screens/Install";
 import { PlanScreen } from "./screens/Plan";
+import { RemoteScreen } from "./screens/Remote";
 import { StorageScreen } from "./screens/Storage";
 import type { Goal, Settings, StackView, Status, SystemView } from "./types";
 
-type Route = "goals" | "plan" | "storage" | "install" | "dashboard" | "account";
+type Route = "goals" | "plan" | "storage" | "install" | "dashboard" | "remote" | "account";
 const WIZARD: Route[] = ["goals", "plan", "storage", "install"];
 const WIZARD_LABELS = ["Choose", "Plan", "Storage", "Install"];
-const ROUTES: Route[] = [...WIZARD, "dashboard", "account"];
+const ROUTES: Route[] = [...WIZARD, "dashboard", "remote", "account"];
 
 function routeFromHash(): Route | null {
   const r = window.location.hash.replace(/^#\/?/, "") as Route;
@@ -186,6 +187,7 @@ export function App() {
             onFixVpn={() => go("plan")}
           />
         )}
+        {current === "remote" && <RemoteScreen onApply={() => go("install")} />}
         {current === "account" && <AccountScreen username={status.username ?? ""} />}
       </>
     );
@@ -227,6 +229,9 @@ export function App() {
                 </a>
                 <a href="#/goals" aria-current={WIZARD.includes(active) ? "page" : undefined}>
                   Set up
+                </a>
+                <a href="#/remote" aria-current={active === "remote" ? "page" : undefined}>
+                  Remote access
                 </a>
                 <a href="#/account" aria-current={active === "account" ? "page" : undefined}>
                   Account

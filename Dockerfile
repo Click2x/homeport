@@ -5,6 +5,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json tsconfig.json ./
 COPY packages ./packages
+COPY docker ./docker
 RUN npm ci --no-audit --no-fund \
  && npm run build \
  && npm prune --omit=dev --no-audit --no-fund
@@ -20,6 +21,7 @@ WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages ./packages
+COPY --from=build /app/docker ./docker
 VOLUME /data
 EXPOSE 8484
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \

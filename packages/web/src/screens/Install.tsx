@@ -3,7 +3,7 @@ import { api, watchJob } from "../api";
 import { Banner, Button, errorText, Spinner } from "../components/ui";
 import type { JobEvent } from "../types";
 
-const STEPS: { id: string; label: string }[] = [
+const STEPS: { id: string; label: string; optional?: boolean }[] = [
   { id: "docker", label: "Checking that Docker is ready" },
   { id: "plan", label: "Choosing ports and preparing the plan" },
   { id: "pull", label: "Downloading the apps" },
@@ -11,6 +11,7 @@ const STEPS: { id: string; label: string }[] = [
   { id: "storage", label: "Checking where your library will live" },
   { id: "network", label: "Connecting Homeport to the apps" },
   { id: "vpn", label: "Making sure downloads are protected" },
+  { id: "remote", label: "Setting up remote access", optional: true },
   { id: "wire", label: "Linking the apps to each other" },
   { id: "profiles", label: "Setting up quality profiles" },
   { id: "requests", label: "Connecting the request page" },
@@ -117,7 +118,7 @@ export function InstallScreen({
       {phase !== "ready" && (
         <div className="card">
           <ol className="list progress" aria-live="polite">
-            {STEPS.map((s) => {
+            {STEPS.filter((s) => !s.optional || states[s.id]).map((s) => {
               const st = states[s.id] ?? "pending";
               return (
                 <li key={s.id}>

@@ -6,7 +6,7 @@ describe("catalog", () => {
 
   it("loads every bundled manifest and goal", () => {
     expect([...catalog.apps.keys()].sort()).toEqual(
-      ["gluetun", "jellyfin", "prowlarr", "qbittorrent", "radarr", "seerr", "sonarr"].sort(),
+      ["gluetun", "jellyfin", "prowlarr", "qbittorrent", "radarr", "seerr", "sonarr", "wireguard"].sort(),
     );
     expect(catalog.goals.map((g) => g.id)).toContain("watch");
   });

@@ -1,0 +1,15 @@
+id: wireguard
+name: Remote access (WireGuard)
+purpose: Lets the people you invite reach your apps from their phones, without opening your apps to the internet.
+category: remote-access
+image: homeport-wireguard
+tag: local
+capAdd: [NET_ADMIN]
+sysctls:
+  net.ipv4.ip_forward: "1"
+ports:
+  - { name: tunnel, container: 51820, protocol: udp }
+volumes:
+  - { kind: config, container: /config }
+ramMB: 30
+pullPolicy: never

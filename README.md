@@ -42,11 +42,13 @@ There is deliberately no button to turn this off. If you decide to download with
 - **VPN gate with a kill switch**, a plain-language VPN check, and the `homeport.toml` override above.
 - **Security basics**: scrypt-hashed passwords, hashed session tokens, an anti-forgery header on every change, sign-in lockout, an audit log, secrets encrypted at rest, and no secrets in the exported Compose file.
 
-All of that is covered by 160 automated tests plus end-to-end scripts that run the real image against real Docker (`npm run e2e:server`).
+- **Remote access with WireGuard.** Turn it on, invite people one at a time, and each gets their own QR code (shown once; the key is never stored). A person can open only the apps you choose, through a small gateway address, and nothing else on their phone is routed through your home. You can change someone's apps, give invitations an end date, see who is connected, and revoke anyone instantly without disturbing the others. Tested with real WireGuard clients, including a client file edited to try to reach more.
+
+All of that is covered by 220 automated tests plus end-to-end scripts that run the real image against real Docker (`npm run e2e:server`).
 
 ## What does not work yet
 
-- **Remote access.** The built-in WireGuard server with QR-code invites, and the Tailscale option, are planned but not built.
+- **Remote access has only been tested on one computer**, with WireGuard clients on the same Docker network, not with a real phone through a real router. It needs a router you can forward a UDP port on, and it will not work behind carrier-grade NAT (common on mobile and some shared connections). The Tailscale alternative and automatic router port opening are not built.
 - **A published image and automated releases.** You build from source for now.
 - **Only one goal.** Photo backup, ad blocking, smart home and other services are planned as community-extensible manifests.
 - **Linux and macOS** are untested. **Docker Desktop for Windows** is the only tested platform.
@@ -57,7 +59,7 @@ All of that is covered by 160 automated tests plus end-to-end scripts that run t
 
 ## Roadmap to a first release
 
-1. Remote access: WireGuard with per-person, revocable, expiring QR invites limited to chosen services.
+1. Test remote access with a real phone and router, and add the Tailscale alternative for connections that cannot forward a port.
 2. A published, versioned, signed image, continuous integration, and pinned app versions.
 3. A security review and hardening (non-root, narrower Docker access).
 4. Linux and macOS testing.
@@ -86,6 +88,7 @@ npm run build      # compile everything, including the web interface
 npm run e2e        # deploys a real stack, wires it, wires it again, tears it down (needs Docker; downloads images)
 npm run e2e:vpn    # proves the download client has no internet when its VPN is down (needs Docker)
 npm run e2e:server # builds the image and drives the whole app through its API on real Docker
+npm run e2e:wireguard # real WireGuard clients against the real sidecar: scoping, revoking, restart (needs Docker)
 ```
 
 A manifest is a short YAML file, so adding a service to the catalog needs no code.

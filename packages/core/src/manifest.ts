@@ -29,6 +29,7 @@ export const AppManifestSchema = Type.Object({
     Type.Literal("media-server"),
     Type.Literal("requests"),
     Type.Literal("vpn-gateway"),
+    Type.Literal("remote-access"),
     Type.Literal("home"),
   ]),
   image: Type.String(),
@@ -40,6 +41,10 @@ export const AppManifestSchema = Type.Object({
   /** Linux capabilities and devices, e.g. the VPN gateway needs NET_ADMIN and /dev/net/tun. */
   capAdd: Type.Optional(Type.Array(Type.String())),
   devices: Type.Optional(Type.Array(Type.String())),
+  /** Kernel settings for the container, e.g. IP forwarding for the remote-access gateway. */
+  sysctls: Type.Optional(Type.Record(Type.String(), Type.String())),
+  /** never = the image is built locally (the remote-access sidecar), so Compose must not try to pull it. */
+  pullPolicy: Type.Optional(Type.Literal("never")),
   /** Env var names forwarded from the user's .env as ${NAME:-} (e.g. VPN provider settings). */
   passthroughEnv: Type.Optional(Type.Array(Type.String({ pattern: "^[A-Z][A-Z0-9_]*$" }))),
   ports: Type.Array(PortSchema),

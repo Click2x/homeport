@@ -1,15 +1,18 @@
 import { syncProfiles, wireApps, wireRequests } from "@homeport/connectors";
 import {
+  applyWireguard,
   checkDocker,
   checkStorage,
   checkVpn,
   composePull,
   composeUp,
   docker,
+  ensureWireguardImage,
   networkName,
   prepareStorage,
   readQbitFirstRunPassword,
   runRecyclarr,
+  wireguardStatus,
   writeProject,
 } from "@homeport/engine";
 import type { DeployOps } from "./deploy.js";
@@ -32,7 +35,18 @@ async function joinNetwork(project: string): Promise<void> {
   }
 }
 
-export const realOps: DeployOps = {
+async function publicIp(): Promise<string | null> {
+  try {
+    const res = await fetch("https://api.ipify.org", { signal: AbortSignal.timeout(8000) });
+    const text = (await res.text()).trim();
+    return /^[0-9a-f.:]+$/i.test(text) ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The real operations. `wireguardContext` is the folder holding the sidecar's Dockerfile. */
+export const createRealOps = (wireguardContext: string): DeployOps => ({
   checkDocker,
   takenPorts,
   writeProject,
@@ -48,4 +62,8 @@ export const realOps: DeployOps = {
   syncProfiles,
   wireRequests,
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
-};
+  ensureWireguardImage: () => ensureWireguardImage(wireguardContext),
+  applyWireguard,
+  wireguardStatus,
+  publicIp,
+});

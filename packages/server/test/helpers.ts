@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadCatalog } from "@homeport/core";
-import type { StorageReport, VpnReport } from "@homeport/engine";
+import type { StorageReport, VpnReport, WgPeerStatus } from "@homeport/engine";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.js";
 import type { DeployOps } from "../src/deploy.js";
@@ -33,6 +33,8 @@ export const unsafeVpn: VpnReport = {
 export function fakeOps(overrides: Partial<DeployOps> = {}) {
   const calls: string[] = [];
   const wired: { selected: string[] }[] = [];
+  const wgApplied: { conf: string; rules: string }[] = [];
+  const wgStatus: WgPeerStatus[] = [];
   const ops: DeployOps = {
     checkDocker: async () => null,
     takenPorts: async () => new Set(),
@@ -52,9 +54,13 @@ export function fakeOps(overrides: Partial<DeployOps> = {}) {
     syncProfiles: async (_c, _s, o) => void (await o.runRecyclarr?.("cfg")),
     wireRequests: async () => void calls.push("requests"),
     sleep: async () => {},
+    ensureWireguardImage: async () => void calls.push("wg-image"),
+    applyWireguard: async (_p, conf, rules) => void wgApplied.push({ conf, rules }),
+    wireguardStatus: async () => wgStatus,
+    publicIp: async () => "203.0.113.9",
     ...overrides,
   };
-  return { ops, calls, wired };
+  return { ops, calls, wired, wgApplied, wgStatus };
 }
 
 export async function makeApp(opts: { ops?: DeployOps; toml?: string } = {}) {

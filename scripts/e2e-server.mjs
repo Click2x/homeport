@@ -73,7 +73,7 @@ const show = (e) => say(`  ${e.status.padEnd(7)} ${e.step.padEnd(9)} ${e.message
 
 async function cleanup() {
   say("cleaning up...");
-  await sh(["rm", "-f", app]).catch(() => {});
+  await sh(["rm", "-f", app, "hp-e2e-srv-phone"]).catch(() => {});
   await sh(["compose", "-p", project, "down", "-v", "--remove-orphans"]).catch(() => {});
   await sh(["volume", "rm", "-f", volume]).catch(() => {});
   await sh(["volume", "rm", "-f", `${project}_recyclarr-run`]).catch(() => {});
@@ -175,6 +175,57 @@ try {
   check("the gateway is running but the download client is still off", names2.includes("gluetun") && !names2.includes("qbittorrent"), names2.join(", "));
   const vpn = (await api("GET", "/api/vpn")).json;
   check("the VPN is not marked verified", vpn.verified === false && vpn.downloadsOnHold === true);
+
+  // ---- remote access: a real phone-like client through a real tunnel ----
+  say("turning on remote access and connecting a real WireGuard client...");
+  const on = await api("PUT", "/api/remote", { enabled: true, endpoint: "203.0.113.9", port: 41820 });
+  check("remote access can be switched on", on.status === 200 && on.json?.needsApply === true, "needs an install to start");
+  const third = await api("POST", "/api/deploy");
+  const withRemote = await watch(third.json.jobId, show);
+  check("the install adds the gateway", withRemote.end?.status === "succeeded" && withRemote.events.some((e) => e.step === "remote"));
+  const sidecar = `${project}-wireguard-1`;
+  const published = (await sh(["port", sidecar])).stdout;
+  check(
+    "the tunnel port is published on this computer over UDP",
+    /51820\/udp -> .*:41820/.test(published),
+    published.trim().split("\n")[0],
+  );
+  const view = (await api("GET", "/api/remote")).json;
+  check("remote access reports it is running", view.live === true && view.needsApply === false);
+  const jellyfinShare = view.shareable.find((x) => x.id === "jellyfin");
+  const invite = await api("POST", "/api/remote/people", { name: "E2E phone", services: ["jellyfin"] });
+  check("an invitation produces a file and a QR code", invite.status === 201 && invite.json?.config?.includes("[Interface]") && invite.json?.qr?.includes("<svg"));
+  check("the invitation is already active on the gateway", invite.json?.applied === true);
+
+  // Connect like a phone would, using only what Homeport gave us (the endpoint is the one thing a router would translate).
+  const net = `${project}_default`;
+  const sidecarIp = (await sh(["inspect", "-f", `{{(index .NetworkSettings.Networks "${net}").IPAddress}}`, sidecar])).stdout.trim();
+  const phoneConf = invite.json.config.replace(/Endpoint = .*/, `Endpoint = ${sidecarIp}:51820`);
+  await sh(["run", "-d", "--name", "hp-e2e-srv-phone", "--cap-add", "NET_ADMIN", "--network", net, "--entrypoint", "sleep", "homeport-wireguard:local", "3600"]);
+  await new Promise((resolve, reject) => {
+    const p = execFile("docker", ["exec", "-i", "hp-e2e-srv-phone", "sh", "-c", "cat > /tmp/c.conf"], (e) => (e ? reject(e) : resolve()));
+    p.stdin.end(phoneConf);
+  });
+  await sh(["exec", "hp-e2e-srv-phone", "wg-quick", "up", "/tmp/c.conf"]);
+  const reach = async (port) => {
+    for (let i = 0; i < 12; i++) {
+      const r = await sh(["exec", "hp-e2e-srv-phone", "wget", "-qO-", "-T", "4", `http://10.13.13.1:${port}/${port === 8096 ? "System/Info/Public" : ""}`]).then((x) => x.stdout, () => null);
+      if (r) return r;
+      await new Promise((r2) => setTimeout(r2, 1000));
+    }
+    return null;
+  };
+  const jf = await reach(jellyfinShare.port);
+  check("the phone reaches Jellyfin through the tunnel Homeport set up", Boolean(jf?.includes("Jellyfin")), jf ? "got Jellyfin's public info" : "no answer");
+  const sonarrDenied = await sh(["exec", "hp-e2e-srv-phone", "wget", "-qO-", "-T", "4", "http://10.13.13.1:8989/"]).then(() => false, () => true);
+  check("...but not Sonarr, which was not given to them", sonarrDenied);
+  await new Promise((r) => setTimeout(r, 2000));
+  const online = (await api("GET", "/api/remote")).json.people[0];
+  check("the interface shows them as connected", online?.online === true, online?.lastSeen ?? "");
+  await api("DELETE", `/api/remote/people/${online.id}`);
+  await new Promise((r) => setTimeout(r, 2500));
+  const afterRevoke = await sh(["exec", "hp-e2e-srv-phone", "wget", "-qO-", "-T", "4", `http://10.13.13.1:${jellyfinShare.port}/System/Info/Public`]).then(() => false, () => true);
+  check("revoking the invitation cuts the phone off", afterRevoke);
 
   // ---- replay after the fact ----
   const replay = await watch(second.json.jobId, () => {});

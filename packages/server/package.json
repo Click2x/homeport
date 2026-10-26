@@ -25,6 +25,7 @@
     "@homeport/core": "0.0.0",
     "@homeport/engine": "0.0.0",
     "@sinclair/typebox": "^0.34.52",
-    "fastify": "^5.12.7"
+    "fastify": "^5.12.7",
+    "qrcode": "^1.5.4"
   }
 }

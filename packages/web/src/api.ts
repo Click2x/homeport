@@ -2,9 +2,11 @@ import type {
   AuditEntry,
   Credentials,
   Goal,
+  Invite,
   JobEvent,
   JobRow,
   PlanView,
+  RemoteView,
   Settings,
   StackView,
   Status,
@@ -92,6 +94,15 @@ export const api = {
   stack: () => request<StackView>("GET", "/stack"),
   credentials: () => request<Credentials>("GET", "/credentials"),
   audit: () => request<{ entries: AuditEntry[] }>("GET", "/audit"),
+  remote: () => request<RemoteView>("GET", "/remote"),
+  saveRemote: (body: { enabled: boolean; endpoint?: string; port?: number }) =>
+    request<RemoteView>("PUT", "/remote", body),
+  detectAddress: () => request<{ ip: string | null }>("POST", "/remote/detect"),
+  invite: (body: { name: string; services: string[]; expiresInDays?: number }) =>
+    request<Invite>("POST", "/remote/people", body),
+  changePerson: (id: string, services: string[]) =>
+    request<{ applied: boolean }>("PUT", `/remote/people/${id}`, { services }),
+  removePerson: (id: string) => request<{ applied: boolean }>("DELETE", `/remote/people/${id}`),
   composeText: async () => {
     const res = await fetch("/api/compose", { credentials: "same-origin" });
     if (!res.ok) throw new ApiError("Choose what you want to do first.", res.status);

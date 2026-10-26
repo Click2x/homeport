@@ -132,3 +132,40 @@ export interface AuditEntry {
   action: string;
   detail: string;
 }
+
+export interface Shareable {
+  id: string;
+  name: string;
+  port: number;
+  /** Lets the person change the setup, not just use it. */
+  sensitive: boolean;
+}
+export interface Person {
+  id: string;
+  name: string;
+  ip: string;
+  services: string[];
+  createdAt: string;
+  expiresAt: string | null;
+  online: boolean;
+  lastSeen: string | null;
+}
+export interface RemoteView {
+  enabled: boolean;
+  endpoint: string;
+  endpointProblem: string | null;
+  port: number;
+  live: boolean;
+  needsApply: boolean;
+  gatewayAddress: string;
+  people: Person[];
+  shareable: Shareable[];
+}
+export interface Invite {
+  person: Person;
+  /** The WireGuard file. Shown once; the private key in it is not stored anywhere. */
+  config: string;
+  qr: string;
+  applied: boolean;
+  note: string;
+}

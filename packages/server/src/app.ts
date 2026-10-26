@@ -10,16 +10,34 @@ import {
   type DataLocation,
   decideVpn,
   docker,
+  endpointProblem,
   generateCompose,
   type HomeportConfig,
   parseConfig,
+  WG_SERVER_IP,
 } from "@homeport/engine";
 import { Type } from "@sinclair/typebox";
 import Fastify, { type FastifyInstance } from "fastify";
 import { registerAuth } from "./auth.js";
-import { DEPLOYED_KEY, type DeployOps, deploy } from "./deploy.js";
+import { DEPLOYED_KEY, type DeployOps, type DeployResult, deploy } from "./deploy.js";
 import { Jobs } from "./jobs.js";
 import { allocatePorts } from "./ports.js";
+import {
+  addPerson,
+  buildFiles,
+  changeServices,
+  describePeers,
+  ensureServerKeys,
+  loadPeers,
+  loadRemoteSettings,
+  type NewPerson,
+  pruneExpired,
+  removePerson,
+  type Shareable,
+  saveRemoteSettings,
+  servicesOf,
+  tunnelPort,
+} from "./remote.js";
 import {
   appsForGoals,
   buildPlan,
@@ -425,6 +443,165 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!store.getJson(DEPLOYED_KEY)) throw new UserError("Install your apps first, then check the VPN.");
     return ops.checkVpn(loadSettings(store).project);
   });
+
+  // ---- remote access ----
+  const remoteLive = () =>
+    Boolean(store.getJson<{ result: DeployResult }>(DEPLOYED_KEY)?.result.ports.wireguard);
+  const livePort = () =>
+    store.getJson<{ result: DeployResult }>(DEPLOYED_KEY)?.result.ports.wireguard?.tunnel;
+
+  /** Push the current people and rules to the running gateway. False if it is not running (they apply at the next install). */
+  const applyRemoteNow = async (): Promise<boolean> => {
+    if (!remoteLive()) return false;
+    try {
+      const settings = loadSettings(store);
+      const { plan } = await currentPlan();
+      const files = buildFiles(store, catalog, plan, settings);
+      await ops.applyWireguard(settings.project, files.conf, files.rules);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const shareableNow = async (): Promise<Shareable[]> => {
+    try {
+      const { plan } = await currentPlan();
+      return servicesOf(catalog, plan).map(({ id, name, port, sensitive }) => ({
+        id,
+        name,
+        port,
+        sensitive,
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  const remoteView = async () => {
+    if (pruneExpired(store).length) await applyRemoteNow();
+    const settings = loadSettings(store);
+    const remote = loadRemoteSettings(store);
+    const live = remote.enabled && remoteLive();
+    const status = live ? await ops.wireguardStatus(settings.project) : [];
+    return {
+      enabled: remote.enabled,
+      endpoint: remote.endpoint,
+      endpointProblem: remote.endpoint ? endpointProblem(remote.endpoint) : null,
+      port: tunnelPort(settings),
+      live,
+      // The gateway is added to (or removed from) the stack by an install, and a new port needs one too.
+      needsApply: remote.enabled ? !live || livePort() !== tunnelPort(settings) : remoteLive(),
+      gatewayAddress: WG_SERVER_IP,
+      people: describePeers(loadPeers(store), status),
+      shareable: await shareableNow(),
+    };
+  };
+
+  app.get("/api/remote", async () => remoteView());
+
+  app.put(
+    "/api/remote",
+    {
+      schema: {
+        body: Type.Object({
+          enabled: Type.Boolean(),
+          endpoint: Type.Optional(Type.String({ maxLength: 253 })),
+          port: Type.Optional(Type.Integer()),
+        }),
+      },
+    },
+    async (req) => {
+      const body = req.body as { enabled: boolean; endpoint?: string; port?: number };
+      const current = loadRemoteSettings(store);
+      const endpoint = (body.endpoint ?? current.endpoint).trim();
+      if (body.enabled) {
+        const problem = endpointProblem(endpoint);
+        if (problem) throw new UserError(problem);
+        if (!loadSettings(store).goals.length)
+          throw new UserError("Choose what you want to do first, then set up remote access.");
+      }
+      if (body.port !== undefined) {
+        if (body.port < 1024 || body.port > 65535)
+          throw new UserError("The port must be a number between 1024 and 65535.");
+        const s = loadSettings(store);
+        store.setJson(SETTINGS_KEY, {
+          ...s,
+          hostPorts: { ...s.hostPorts, wireguard: { tunnel: body.port } },
+        });
+      }
+      if (body.enabled) ensureServerKeys(store);
+      saveRemoteSettings(store, { enabled: body.enabled, endpoint });
+      store.audit(who(req), "remote-access", body.enabled ? "turned on" : "turned off");
+      return remoteView();
+    },
+  );
+
+  // Asking "what is my public address?" contacts an outside service, so it only happens when the person clicks.
+  app.post("/api/remote/detect", async () => ({ ip: await ops.publicIp() }));
+
+  app.post(
+    "/api/remote/people",
+    {
+      schema: {
+        body: Type.Object({
+          name: Type.String({ maxLength: 80 }),
+          services: Type.Array(Type.String(), { maxItems: 30 }),
+          expiresInDays: Type.Optional(Type.Integer()),
+        }),
+      },
+    },
+    async (req, reply) => {
+      const input = req.body as NewPerson;
+      const settings = loadSettings(store);
+      const made = await addPerson(store, input, await shareableNow(), settings, loadRemoteSettings(store));
+      const applied = await applyRemoteNow();
+      store.audit(who(req), "remote-invite", made.peer.name);
+      return reply.code(201).send({
+        person: describePeers([made.peer], [])[0],
+        // Shown once. The private key is not stored anywhere, so this is the only copy.
+        config: made.config,
+        qr: made.qr,
+        applied,
+        note: applied
+          ? "Ready. Scan the code with the WireGuard app on their phone."
+          : "Saved. It starts working after you apply your changes (the Install step).",
+      });
+    },
+  );
+
+  app.put(
+    "/api/remote/people/:id",
+    { schema: { body: Type.Object({ services: Type.Array(Type.String(), { maxItems: 30 }) }) } },
+    async (req) => {
+      const peer = changeServices(
+        store,
+        (req.params as { id: string }).id,
+        (req.body as { services: string[] }).services,
+        await shareableNow(),
+      );
+      const applied = await applyRemoteNow();
+      store.audit(who(req), "remote-change", peer.name);
+      return { applied, people: describePeers(loadPeers(store), []) };
+    },
+  );
+
+  app.delete("/api/remote/people/:id", async (req) => {
+    const peer = removePerson(store, (req.params as { id: string }).id);
+    const applied = await applyRemoteNow();
+    store.audit(who(req), "remote-revoke", peer.name);
+    return { applied };
+  });
+
+  // Invitations that were given an end date stop working by themselves.
+  const expiryTimer = setInterval(
+    async () => {
+      if (pruneExpired(store).length) await applyRemoteNow();
+    },
+    60 * 60 * 1000,
+  );
+  expiryTimer.unref();
+  app.addHook("onClose", async () => clearInterval(expiryTimer));
 
   // ---- the web interface ----
   if (deps.webDir && existsSync(join(deps.webDir, "index.html"))) {

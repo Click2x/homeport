@@ -19,6 +19,7 @@
     "e2e:vpn": "npm run build && node scripts/e2e-vpn.mjs",
     "docker:build": "docker build -t homeport:dev .",
     "e2e:server": "npm run docker:build && node scripts/e2e-server.mjs",
+    "e2e:wireguard": "npm run build && node scripts/e2e-wireguard.mjs",
     "format": "biome check --write ."
   },
   "devDependencies": {
@@ -27,6 +28,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
     "@types/node": "^22.20.5",
+    "@types/qrcode": "^1.5.6",
     "jsdom": "^29.1.1",
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",

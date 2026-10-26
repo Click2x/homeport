@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { loadCatalog } from "@homeport/core";
 import { buildApp } from "./app.js";
 import { makeSetupCode } from "./crypto.js";
-import { realOps } from "./ops.js";
+import { createRealOps } from "./ops.js";
 import { Store } from "./store.js";
 
 const inContainer = process.env.HOMEPORT_IN_CONTAINER === "1";
@@ -22,7 +22,7 @@ const setupToken = needsSetup ? makeSetupCode() : null;
 const app = await buildApp({
   store,
   catalog: loadCatalog(),
-  ops: realOps,
+  ops: createRealOps(process.env.HOMEPORT_WG_CONTEXT ?? join(here, "..", "..", "..", "docker", "wireguard")),
   dataDir,
   version,
   setupToken,

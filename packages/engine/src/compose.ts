@@ -11,6 +11,8 @@ export interface ComposeService {
   volumes?: string[];
   cap_add?: string[];
   devices?: string[];
+  sysctls?: Record<string, string>;
+  pull_policy?: string;
   network_mode?: string;
   depends_on?: string[];
 }
@@ -65,6 +67,8 @@ export function generateCompose(catalog: Catalog, plan: Plan): ComposeFile {
 
     if (app.capAdd?.length) service.cap_add = app.capAdd;
     if (app.devices?.length) service.devices = app.devices;
+    if (app.sysctls) service.sysctls = app.sysctls;
+    if (app.pullPolicy) service.pull_policy = app.pullPolicy;
 
     if (isRouted(plan, app)) {
       // Shares the gateway's network, so it has no route out except through the tunnel.

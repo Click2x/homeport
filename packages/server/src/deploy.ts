@@ -16,9 +16,11 @@ import {
   type StorageReport,
   serviceHost,
   type VpnReport,
+  type WgPeerStatus,
 } from "@homeport/engine";
 import type { JobReporter } from "./jobs.js";
 import { allocatePorts } from "./ports.js";
+import { buildFiles, loadRemoteSettings } from "./remote.js";
 import { appsForGoals, buildPlan, loadSettings, SETTINGS_KEY, UserError } from "./settings.js";
 import type { Store } from "./store.js";
 import { setVpnVerified, vpnConfigured, vpnEnv, vpnVerified } from "./vpn-settings.js";
@@ -41,6 +43,12 @@ export interface DeployOps {
   syncProfiles(ctx: WireContext, selected: string[], options: WireOptions): Promise<void>;
   wireRequests(ctx: WireContext, selected: string[]): Promise<void>;
   sleep(ms: number): Promise<void>;
+  /** Build the remote-access sidecar image if it is missing or out of date. */
+  ensureWireguardImage(): Promise<unknown>;
+  applyWireguard(project: string, conf: string, rules: string): Promise<void>;
+  wireguardStatus(project: string): Promise<WgPeerStatus[]>;
+  /** The public address of this connection, for "what do I tell people to connect to". */
+  publicIp(): Promise<string | null>;
 }
 
 export interface DeployDeps {
@@ -121,6 +129,9 @@ export async function deploy(
   const settings = loadSettings(store);
   if (!settings.goals.length) throw new UserError("Choose what you want to do first, then deploy.");
   const apps = appsForGoals(catalog, settings.goals);
+  // Remote access adds its own small gateway to the stack.
+  const remote = loadRemoteSettings(store);
+  const stackApps = remote.enabled ? [...apps, "wireguard"] : apps;
 
   // ---- the VPN rule ----
   const config = deps.loadConfig();
@@ -132,11 +143,16 @@ export async function deploy(
 
   // ---- ports ----
   report.start("plan", "Choosing ports and preparing the plan");
-  const hostPorts = allocatePorts(catalog, apps, await ops.takenPorts(settings.project), settings.hostPorts);
+  const hostPorts = allocatePorts(
+    catalog,
+    stackApps,
+    await ops.takenPorts(settings.project),
+    settings.hostPorts,
+  );
   store.setJson(SETTINGS_KEY, { ...settings, hostPorts });
   // Without VPN settings the gateway has nothing to connect to, so it stays off too.
   const initialHold = decision.vpn && !vpnConfigured(store) ? [...decision.hold, "gluetun"] : decision.hold;
-  let plan = buildPlan(settings, apps, { vpn: decision.vpn, hold: initialHold, hostPorts });
+  let plan = buildPlan(settings, stackApps, { vpn: decision.vpn, hold: initialHold, hostPorts });
   const project = projectOf(deps.dataDir, settings.project);
   const location: DataLocation =
     settings.data.mode === "bind" ? settings.data : { mode: "volume", project: settings.project };
@@ -148,6 +164,11 @@ export async function deploy(
   report.done("plan", `${apps.length} services planned`);
 
   // ---- start ----
+  if (remote.enabled) {
+    report.start("remote", "Preparing remote access");
+    await ops.ensureWireguardImage();
+    report.done("remote", "Remote access is ready to start");
+  }
   report.start("pull", "Downloading the apps (the first time takes a few minutes)");
   await ops.writeProject(project, composeToYaml(generateCompose(catalog, plan)), buildDotEnv(deps, plan));
   await ops.pull(project);
@@ -246,6 +267,14 @@ export async function deploy(
         );
       }
     }
+  }
+
+  // ---- remote access: give the gateway its people and rules ----
+  if (remote.enabled) {
+    report.start("remote", "Opening remote access for the people you invited");
+    const files = buildFiles(store, catalog, plan, settings);
+    await ops.applyWireguard(settings.project, files.conf, files.rules);
+    report.done("remote", `Remote access is on (port ${files.port})`);
   }
 
   // ---- wiring ----

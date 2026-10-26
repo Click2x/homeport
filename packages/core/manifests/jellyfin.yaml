@@ -1,0 +1,14 @@
+id: jellyfin
+name: Jellyfin
+purpose: Your own streaming service for the movies and shows you collect.
+category: media-server
+image: lscr.io/linuxserver/jellyfin
+tag: latest
+testedVersion: "12.2"
+linuxserver: true
+ports:
+  - { name: web, container: 8096 }
+volumes:
+  - { kind: config, container: /config }
+  - { kind: data, container: /data }
+ramMB: 1000

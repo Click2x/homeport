@@ -5,3 +5,9 @@ node_modules/
 *.bak
 spike/recyclarr/
 spike/recyclarr-test/
+
+# build output and tooling
+dist/
+*.tsbuildinfo
+.agent-board/
+coverage/

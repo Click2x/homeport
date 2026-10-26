@@ -1,0 +1,27 @@
+{
+  "name": "homeport",
+  "private": true,
+  "description": "Guided, auto-wired rollout of a self-hosted media stack and home services on Docker.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.5"
+  }
+}

@@ -47,6 +47,24 @@ See [`spike/`](spike/). The spike keeps its generated secrets in a git-ignored `
 
 Design notes: [`docs/DESIGN.md`](docs/DESIGN.md). Experience notes: [`docs/UX.md`](docs/UX.md).
 
+## Development
+
+The real app is being built as a TypeScript monorepo under [`packages/`](packages/), starting from the proven spike:
+
+| Package | What it holds |
+|---|---|
+| `@homeport/core` | The app manifest schema, the catalog of services (`manifests/*.yaml`) and the goals that select them |
+| `@homeport/engine` | Turns a plan into a Docker Compose project (storage modes, VPN routing, generated-key placeholders) |
+
+```bash
+npm install
+npm test           # unit tests
+npm run typecheck  # tsc -b
+npm run lint       # Biome
+```
+
+A manifest is a short YAML file, so adding a service to the catalog needs no code. The engine's output is checked against the spike's known-good compose file.
+
 ## Ground rules
 
 - Homeport does **not** bundle or recommend indexers or content sources. You are responsible for what you download and for following the laws that apply to you.

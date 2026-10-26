@@ -1,0 +1,14 @@
+id: prowlarr
+name: Prowlarr
+purpose: Keeps your list of search sources in one place and shares it with the other apps.
+category: media-manager
+image: lscr.io/linuxserver/prowlarr
+tag: latest
+testedVersion: 2.6.5
+linuxserver: true
+ports:
+  - { name: web, container: 9696 }
+apiKeyEnv: PROWLARR__AUTH__APIKEY
+volumes:
+  - { kind: config, container: /config }
+ramMB: 300

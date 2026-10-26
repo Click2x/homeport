@@ -1,0 +1,14 @@
+id: seerr
+name: Seerr
+purpose: A simple page where you and your family can ask for movies and shows.
+category: requests
+image: ghcr.io/seerr-team/seerr
+tag: latest
+testedVersion: 3.5.0
+init: true
+ports:
+  - { name: web, container: 5055 }
+volumes:
+  - { kind: config, container: /app/config }
+dependsOn: [jellyfin, sonarr, radarr]
+ramMB: 300

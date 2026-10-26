@@ -1,0 +1,15 @@
+id: radarr
+name: Radarr
+purpose: Finds, downloads and organizes movies for you.
+category: media-manager
+image: lscr.io/linuxserver/radarr
+tag: latest
+testedVersion: 6.4.4
+linuxserver: true
+ports:
+  - { name: web, container: 7878 }
+apiKeyEnv: RADARR__AUTH__APIKEY
+volumes:
+  - { kind: config, container: /config }
+  - { kind: data, container: /data }
+ramMB: 400

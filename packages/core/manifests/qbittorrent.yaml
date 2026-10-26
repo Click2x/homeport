@@ -1,0 +1,17 @@
+id: qbittorrent
+name: qBittorrent
+purpose: The download client. It only runs behind a VPN that Homeport has verified.
+category: downloader
+image: lscr.io/linuxserver/qbittorrent
+tag: latest
+testedVersion: 5.2.4
+linuxserver: true
+env:
+  WEBUI_PORT: "8080"
+ports:
+  - { name: web, container: 8080 }
+volumes:
+  - { kind: config, container: /config }
+  - { kind: data, container: /data }
+vpn: required
+ramMB: 300

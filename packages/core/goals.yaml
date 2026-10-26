@@ -1,0 +1,4 @@
+- id: watch
+  title: Watch movies and shows
+  description: Collect movies and TV, organize them, and stream them to any screen at home.
+  apps: [prowlarr, sonarr, radarr, qbittorrent, jellyfin, seerr]

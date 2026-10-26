@@ -56,6 +56,7 @@ The real app is being built as a TypeScript monorepo under [`packages/`](package
 | `@homeport/core` | The app manifest schema, the catalog of services (`manifests/*.yaml`) and the goals that select them |
 | `@homeport/engine` | Turns a plan into a Docker Compose project (storage modes, VPN routing, generated-key placeholders) and runs the Docker side: deploy, storage checker and tiers, the VPN gate and kill-switch check, `homeport.toml`, Recyclarr |
 | `@homeport/connectors` | Typed, idempotent wiring for Sonarr, Radarr, Prowlarr, qBittorrent, Jellyfin and Seerr |
+| `@homeport/server` | The API: first-run account setup with a one-time code, sign-in, encrypted secrets, the deploy job with live progress, VPN and storage endpoints |
 
 ```bash
 npm install

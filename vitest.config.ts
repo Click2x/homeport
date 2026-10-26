@@ -10,6 +10,7 @@ export default defineConfig({
       "@homeport/core": src("core"),
       "@homeport/engine": src("engine"),
       "@homeport/connectors": src("connectors"),
+      "@homeport/server": src("server"),
     },
   },
   test: { include: ["packages/*/test/**/*.test.ts"] },

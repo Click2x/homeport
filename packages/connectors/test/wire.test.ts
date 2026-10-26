@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { recyclarrConfig, wireQbittorrent, wireStack } from "../src/index.js";
+import { recyclarrConfig, wireApps, wireQbittorrent, wireStack } from "../src/index.js";
 import { fakeStack } from "./fakes.js";
 
 const ALL = ["prowlarr", "sonarr", "radarr", "qbittorrent", "jellyfin", "seerr"];
@@ -128,6 +128,24 @@ describe("partial installs", () => {
     expect(stack.state.jellyfin.wizardDone).toBe(false);
     expect(stack.requests.some((r) => r.includes("prowlarr"))).toBe(false);
     expect(stack.requests.some((r) => r.includes("seerr"))).toBe(false);
+  });
+});
+
+describe("a held-back download client", () => {
+  it("is not wired into Sonarr or Radarr until it is actually running", async () => {
+    const stack = fakeStack();
+    await wireApps(stack.context(), ["prowlarr", "sonarr", "radarr", "jellyfin"]);
+    expect(stack.state.arrState.sonarr.clients).toHaveLength(0);
+    expect(stack.state.arrState.radarr.clients).toHaveLength(0);
+    expect(stack.state.arrState.sonarr.roots).toHaveLength(1); // library folders are still set up
+    expect(stack.requests.some((r) => r.includes("qbittorrent") || r.includes("gluetun"))).toBe(false);
+  });
+
+  it("is added once it starts", async () => {
+    const stack = fakeStack({ qbitFirstRunPassword: "temp-pass" });
+    await wireApps(stack.context(), ["prowlarr", "sonarr", "radarr"]);
+    await wireApps(stack.context(), ["prowlarr", "sonarr", "radarr", "qbittorrent"]);
+    expect(stack.state.arrState.sonarr.clients).toHaveLength(1);
   });
 });
 

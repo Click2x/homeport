@@ -22,7 +22,7 @@ export async function wireApps(ctx: WireContext, selected: string[]): Promise<vo
   if (has("prowlarr")) await waitForApp(ctx, "prowlarr", "v1");
 
   if (has("qbittorrent")) await wireQbittorrent(ctx);
-  for (const m of managers) await wireMediaManager(ctx, m);
+  for (const m of managers) await wireMediaManager(ctx, m, { downloadClient: has("qbittorrent") });
   if (has("prowlarr")) await wireProwlarr(ctx, managers);
   if (has("jellyfin")) await wireJellyfin(ctx);
 }

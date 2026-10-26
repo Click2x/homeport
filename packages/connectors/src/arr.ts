@@ -32,7 +32,11 @@ export async function waitForApp(ctx: WireContext, app: string, apiVersion: "v1"
 }
 
 /** Give Sonarr or Radarr a library folder and qBittorrent as its download client. Safe to run again. */
-export async function wireMediaManager(ctx: WireContext, app: MediaManager): Promise<void> {
+export async function wireMediaManager(
+  ctx: WireContext,
+  app: MediaManager,
+  { downloadClient = true }: { downloadClient?: boolean } = {},
+): Promise<void> {
   const api = mediaManagerApi(ctx, app);
   const { label, rootPath, categoryField, category } = MEDIA[app];
 
@@ -41,6 +45,9 @@ export async function wireMediaManager(ctx: WireContext, app: MediaManager): Pro
     await api("POST", "/rootfolder", { path: rootPath });
     ctx.log(`${label}: added library folder ${rootPath}`);
   }
+
+  // A held-back download client is not running, so do not point the manager at it yet.
+  if (!downloadClient) return;
 
   // The host is the VPN gateway when qBittorrent runs behind it, so this must follow the plan.
   const qbit = ctx.internal("qbittorrent");

@@ -15,6 +15,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "lint": "biome check .",
+    "e2e": "npm run build && node scripts/e2e.mjs",
     "format": "biome check --write ."
   },
   "devDependencies": {

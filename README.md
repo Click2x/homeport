@@ -54,16 +54,18 @@ The real app is being built as a TypeScript monorepo under [`packages/`](package
 | Package | What it holds |
 |---|---|
 | `@homeport/core` | The app manifest schema, the catalog of services (`manifests/*.yaml`) and the goals that select them |
-| `@homeport/engine` | Turns a plan into a Docker Compose project (storage modes, VPN routing, generated-key placeholders) |
+| `@homeport/engine` | Turns a plan into a Docker Compose project (storage modes, VPN routing, generated-key placeholders) and runs the Docker side: deploy, first-run checks, Recyclarr |
+| `@homeport/connectors` | Typed, idempotent wiring for Sonarr, Radarr, Prowlarr, qBittorrent, Jellyfin and Seerr |
 
 ```bash
 npm install
-npm test           # unit tests
+npm test           # unit tests, no Docker needed (wiring runs against in-memory fakes)
 npm run typecheck  # tsc -b
 npm run lint       # Biome
+npm run e2e        # deploys a real stack, wires it, wires it again, tears it down (needs Docker; downloads images)
 ```
 
-A manifest is a short YAML file, so adding a service to the catalog needs no code. The engine's output is checked against the spike's known-good compose file.
+A manifest is a short YAML file, so adding a service to the catalog needs no code. The engine's output is checked against the spike's known-good compose file, and the end-to-end test proves the TypeScript wiring against real containers (second run changes nothing).
 
 ## Ground rules
 

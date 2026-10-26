@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       "@homeport/core": src("core"),
       "@homeport/engine": src("engine"),
+      "@homeport/connectors": src("connectors"),
     },
   },
   test: { include: ["packages/*/test/**/*.test.ts"] },

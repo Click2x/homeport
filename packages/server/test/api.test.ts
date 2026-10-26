@@ -348,16 +348,31 @@ describe("live progress", () => {
 });
 
 describe("allocatePorts", () => {
+  it("skips a port that a program outside Docker is already listening on (for example a native Jellyfin)", async () => {
+    const busy = async (port: number) => port === 8096;
+    const r = await allocatePorts(loadCatalog(), ["jellyfin"], new Set(), {}, busy);
+    expect(r.jellyfin).toEqual({ web: 18096 });
+  });
+
+  it("does not ask about ports the person already has", async () => {
+    const asked: number[] = [];
+    await allocatePorts(loadCatalog(), ["sonarr"], new Set(), { sonarr: { web: 8989 } }, async (p) => {
+      asked.push(p);
+      return true;
+    });
+    expect(asked).toEqual([]);
+  });
+
   const catalog = loadCatalog();
-  it("uses the standard port when it is free", () => {
-    expect(allocatePorts(catalog, ["sonarr"], new Set()).sonarr).toEqual({ web: 8989 });
+  it("uses the standard port when it is free", async () => {
+    expect((await allocatePorts(catalog, ["sonarr"], new Set())).sonarr).toEqual({ web: 8989 });
   });
-  it("moves to a free port above 10000 when another program has it", () => {
-    expect(allocatePorts(catalog, ["sonarr"], new Set([8989])).sonarr).toEqual({ web: 18989 });
-    expect(allocatePorts(catalog, ["sonarr"], new Set([8989, 18989])).sonarr).toEqual({ web: 18990 });
+  it("moves to a free port above 10000 when another program has it", async () => {
+    expect((await allocatePorts(catalog, ["sonarr"], new Set([8989]))).sonarr).toEqual({ web: 18989 });
+    expect((await allocatePorts(catalog, ["sonarr"], new Set([8989, 18989]))).sonarr).toEqual({ web: 18990 });
   });
-  it("keeps ports already chosen, and never gives two apps the same one", () => {
-    const r = allocatePorts(catalog, ["sonarr", "radarr"], new Set(), { sonarr: { web: 7878 } });
+  it("keeps ports already chosen, and never gives two apps the same one", async () => {
+    const r = await allocatePorts(catalog, ["sonarr", "radarr"], new Set(), { sonarr: { web: 7878 } });
     expect(r.sonarr).toEqual({ web: 7878 });
     expect(r.radarr?.web).not.toBe(7878);
   });

@@ -16,7 +16,7 @@ import {
   writeProject,
 } from "@homeport/engine";
 import type { DeployOps } from "./deploy.js";
-import { takenPorts } from "./ports.js";
+import { portInUseOnHost, takenPorts } from "./ports.js";
 import { UserError } from "./settings.js";
 
 /** Homeport reaches the apps by name, so it has to share their network, which only works from inside a container. */
@@ -62,6 +62,7 @@ export const createRealOps = (wireguardContext: string): DeployOps => ({
   syncProfiles,
   wireRequests,
   sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+  portInUse: portInUseOnHost,
   ensureWireguardImage: () => ensureWireguardImage(wireguardContext),
   applyWireguard,
   wireguardStatus,

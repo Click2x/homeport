@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "schedule": ["before 6am on monday"],
+  "customManagers": [
+    {
+      "description": "Keep the pinned app images in the catalog current (tag, version and digest together)",
+      "customType": "regex",
+      "managerFilePatterns": ["/^packages/core/manifests/.+\\.yaml$/"],
+      "matchStrings": [
+        "image: (?<depName>\\S+)\\ntag: \"(?<currentValue>[^\"]+)\"\\ndigest: (?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "App image updates change what Homeport wires together, so they need a human to run the end-to-end tests",
+      "matchFileNames": ["packages/core/manifests/**"],
+      "labels": ["app-image", "needs-e2e"],
+      "automerge": false
+    }
+  ]
+}

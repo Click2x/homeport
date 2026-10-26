@@ -3,8 +3,9 @@ name: Sonarr
 purpose: Finds, downloads and organizes TV shows for you.
 category: media-manager
 image: lscr.io/linuxserver/sonarr
-tag: latest
-testedVersion: 4.0.20
+tag: "4.0.20.3014"
+digest: sha256:48e36b608b461273b9dae857725cd0561a127f2c694b687318f6d0c5ce63e5c9
+testedVersion: "4.0.20.3014"
 linuxserver: true
 ports:
   - { name: web, container: 8989 }

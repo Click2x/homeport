@@ -6,9 +6,9 @@ Homeport takes a complete beginner from "I have Docker Desktop" to a working Son
 
 Homeport is a **standalone product**: it needs no account, no cloud service and no other software besides Docker. The intended experience is described in [`docs/UX.md`](docs/UX.md).
 
-> ## Status: alpha preview. Not released.
+> ## Status: alpha (0.1.0). Not released yet.
 >
-> The app works end to end for **one goal** (watch movies and shows) on **Windows with Docker Desktop**: you open a web page, create an account, pick what you want, and Homeport installs and connects everything and shows you a dashboard. There is **no published image yet**, so you build it yourself (below). It has **not had a security review**, so do not expose it to the internet. Linux and macOS are untested.
+> The app works end to end for **one goal** (watch movies and shows) on **Windows with Docker Desktop**: you open a web page, create an account, pick what you want, and Homeport installs and connects everything and shows you a dashboard. There is **no published image yet**, so you build it yourself (below). It has **not had a security review**, so do not expose it to the internet. Linux and macOS are untested. See the [changelog](CHANGELOG.md) for what is in 0.1.0 and its known limitations.
 
 ## Try the preview
 
@@ -18,12 +18,13 @@ You need **Docker** (Docker Desktop on Windows or macOS, or Docker Engine with C
 git clone https://github.com/Click2x/homeport.git
 cd homeport
 docker build -t homeport .
-docker run -d --name homeport --restart unless-stopped -p 127.0.0.1:8484:8484 -v /var/run/docker.sock:/var/run/docker.sock -v homeport-data:/data homeport
+docker run -d --name homeport --restart unless-stopped --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true --add-host host.docker.internal:host-gateway -p 127.0.0.1:8484:8484 -v /var/run/docker.sock:/var/run/docker.sock -v homeport-data:/data homeport
 docker logs homeport
 ```
 
 Open <http://localhost:8484> and enter the setup code printed in the log (it looks like `K7QM-2XWB-9TDA`) to create your account. Then follow the pages: choose what you want, review the plan, check your storage, install.
 
+- The extra flags are the hardening the tests run with: a read-only file system, no extra Linux capabilities, and no privilege escalation. `--add-host` lets Homeport notice programs on your computer that already use a port (it is needed on plain Linux and harmless elsewhere).
 - **It only listens on your own computer** (`127.0.0.1`). The container holds access to Docker, which is root-equivalent, so keep it that way until remote access with proper protection exists.
 - Your data lives in the `homeport-data` volume. To start over: `docker rm -f homeport` and `docker volume rm homeport-data` (this does not remove the apps Homeport installed; use `docker compose -p homeport down -v` for those).
 
@@ -44,7 +45,7 @@ There is deliberately no button to turn this off. If you decide to download with
 
 - **Remote access with WireGuard.** Turn it on, invite people one at a time, and each gets their own QR code (shown once; the key is never stored). A person can open only the apps you choose, through a small gateway address, and nothing else on their phone is routed through your home. You can change someone's apps, give invitations an end date, see who is connected, and revoke anyone instantly without disturbing the others. Tested with real WireGuard clients, including a client file edited to try to reach more.
 
-All of that is covered by 220 automated tests plus end-to-end scripts that run the real image against real Docker (`npm run e2e:server`).
+All of that is covered by 223 automated tests plus end-to-end scripts that run the real image against real Docker (`npm run e2e:server`).
 
 ## What does not work yet
 
@@ -54,7 +55,7 @@ All of that is covered by 220 automated tests plus end-to-end scripts that run t
 - **Linux and macOS** are untested. **Docker Desktop for Windows** is the only tested platform.
 - **No security review yet**, and the container runs as root with the Docker socket.
 - A connected VPN tunnel has only been tested against a real ProtonVPN WireGuard account in the original proof of concept, not through the new interface.
-- Images use `latest` tags and are not pinned (see the tested versions below). Recyclarr uses a minimal profile config. Indexers are not configured; you add your own.
+- Recyclarr uses a minimal profile config. Indexers are not configured; you add your own.
 - Not yet checked by the storage checker: whether files added from outside Docker are noticed, and whether a drive is mounted.
 
 ## Roadmap to a first release
@@ -93,6 +94,10 @@ npm run e2e:wireguard # real WireGuard clients against the real sidecar: scoping
 
 A manifest is a short YAML file, so adding a service to the catalog needs no code.
 
+## More
+
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Design notes](docs/DESIGN.md) · [Experience notes](docs/UX.md)
+
 ## Ground rules
 
 - Homeport does **not** bundle or recommend indexers or content sources. You are responsible for what you download and for following the laws that apply to you.
@@ -101,7 +106,7 @@ A manifest is a short YAML file, so adding a service to the catalog needs no cod
 
 ## Tested with
 
-Prowlarr 2.6.5, Sonarr 4.0.20, Radarr 6.4.4, qBittorrent 5.2.4, Jellyfin 12.2, Seerr 3.5.0, Recyclarr 8.8.0, gluetun (latest at the time), on Docker Desktop 29 for Windows. Images use `latest` tags, so newer releases may behave differently.
+App images are **pinned to exact digests** in [`packages/core/manifests`](packages/core/manifests), so every install gets the versions that were tested: Prowlarr 2.6.5.5623, Sonarr 4.0.20.3014, Radarr 6.4.4.10685, qBittorrent 5.3.0, Jellyfin 12.3.0, Seerr 3.5.1, Recyclarr 8.8.0 and gluetun (the 2026-10-19 build), on Docker Desktop 29 for Windows. Updating them is a deliberate, tested change.
 
 ## The original proof of concept
 

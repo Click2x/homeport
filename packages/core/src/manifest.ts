@@ -34,6 +34,8 @@ export const AppManifestSchema = Type.Object({
   ]),
   image: Type.String(),
   tag: Type.String(),
+  /** Exact image to run, as sha256:... . When set it wins over the tag, so installs are reproducible. */
+  digest: Type.Optional(Type.String({ pattern: "^sha256:[0-9a-f]{64}$" })),
   testedVersion: Type.Optional(Type.String()),
   /** linuxserver.io images take PUID, PGID and TZ. */
   linuxserver: Type.Optional(Type.Boolean()),

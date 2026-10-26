@@ -1,0 +1,42 @@
+name: Something is not working
+description: Homeport did not do what it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Please do **not** paste passwords, API keys, VPN details, WireGuard files or QR codes anywhere in this form.
+        Homeport's log does not contain them, but check before you paste.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Chose 'Watch movies and shows'\n2. Pressed Install now\n3. ..."
+  - type: textarea
+    id: log
+    attributes:
+      label: The install log, or the last lines of `docker logs homeport`
+      description: The install page has a "Show the full log" section you can copy.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Homeport version
+      description: Shown at the bottom of every page.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where does Docker run?
+      options:
+        - Docker Desktop on Windows
+        - Docker Desktop on macOS
+        - Docker Engine on Linux
+        - Something else
+    validations:
+      required: true

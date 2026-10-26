@@ -3,8 +3,9 @@ name: qBittorrent
 purpose: The download client. It only runs behind a VPN that Homeport has verified.
 category: downloader
 image: lscr.io/linuxserver/qbittorrent
-tag: latest
-testedVersion: 5.2.4
+tag: "5.3.0"
+digest: sha256:75ecbb1c89ab7b0a21c4bde40b4820e4f1649d2d56d83b91913422155e8d2a5f
+testedVersion: "5.3.0"
 linuxserver: true
 env:
   WEBUI_PORT: "8080"

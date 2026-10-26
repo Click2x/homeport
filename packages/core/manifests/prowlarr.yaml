@@ -3,8 +3,9 @@ name: Prowlarr
 purpose: Keeps your list of search sources in one place and shares it with the other apps.
 category: media-manager
 image: lscr.io/linuxserver/prowlarr
-tag: latest
-testedVersion: 2.6.5
+tag: "2.6.5.5623"
+digest: sha256:b3b00047ed20f6ce2b16780145cb6a0acb51c9e28ea6aa6f5dcd33c7034f1797
+testedVersion: "2.6.5.5623"
 linuxserver: true
 ports:
   - { name: web, container: 9696 }

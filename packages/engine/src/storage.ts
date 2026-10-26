@@ -1,4 +1,4 @@
-import { dataVolumeName, docker } from "./docker.js";
+import { dataVolumeName, docker, HELPER_IMAGES } from "./docker.js";
 
 /** Where the shared media and downloads live, as the storage checker sees it. */
 export type DataLocation = { mode: "volume"; project: string } | { mode: "bind"; source: string };
@@ -341,7 +341,7 @@ export async function prepareStorage(location: DataLocation, { puid, pgid }: Che
     "--rm",
     "-v",
     mountFor(location),
-    "alpine",
+    HELPER_IMAGES.alpine,
     "sh",
     "-c",
     `mkdir -p ${APP_DIRS} && chown ${Number(puid)}:${Number(pgid)} ${APP_DIRS}`,
@@ -357,7 +357,16 @@ export async function checkStorage(
   { puid, pgid }: CheckOptions,
 ): Promise<StorageReport> {
   const mount = mountFor(location);
-  const out = await docker(["run", "--rm", "-v", mount, "alpine", "sh", "-c", probeScript(puid, pgid)]);
+  const out = await docker([
+    "run",
+    "--rm",
+    "-v",
+    mount,
+    HELPER_IMAGES.alpine,
+    "sh",
+    "-c",
+    probeScript(puid, pgid),
+  ]);
   // Can the user the apps run as write here? A separate container, started as that user.
   const asApp = await docker([
     "run",
@@ -366,7 +375,7 @@ export async function checkStorage(
     `${Number(puid)}:${Number(pgid)}`,
     "-v",
     mount,
-    "alpine",
+    HELPER_IMAGES.alpine,
     "sh",
     "-c",
     "mkdir -p /data/.homeport-perm && touch /data/.homeport-perm/x && rm -rf /data/.homeport-perm && echo ok",

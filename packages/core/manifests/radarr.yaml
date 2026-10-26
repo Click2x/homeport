@@ -3,8 +3,9 @@ name: Radarr
 purpose: Finds, downloads and organizes movies for you.
 category: media-manager
 image: lscr.io/linuxserver/radarr
-tag: latest
-testedVersion: 6.4.4
+tag: "6.4.4.10685"
+digest: sha256:084b3b2ab1d0ef930660727259546a241f2bdf67c9ed085d54bf1486a6887c9b
+testedVersion: "6.4.4.10685"
 linuxserver: true
 ports:
   - { name: web, container: 7878 }

@@ -1,0 +1,55 @@
+name: End-to-end
+
+# These run the real image against real Docker and download several GB of images, so they are not
+# part of every pull request. They run nightly (to catch upstream apps changing under us) and on demand.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-system:
+    name: Full system (real image, real Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: docker build -t homeport:dev .
+      - run: node scripts/e2e-server.mjs
+
+  wireguard:
+    name: Remote access (real WireGuard clients)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/e2e-wireguard.mjs
+
+  vpn-fail-closed:
+    name: VPN gate fails closed
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/e2e-vpn.mjs

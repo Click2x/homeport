@@ -54,6 +54,7 @@ export function fakeOps(overrides: Partial<DeployOps> = {}) {
     syncProfiles: async (_c, _s, o) => void (await o.runRecyclarr?.("cfg")),
     wireRequests: async () => void calls.push("requests"),
     sleep: async () => {},
+    portInUse: async () => false,
     ensureWireguardImage: async () => void calls.push("wg-image"),
     applyWireguard: async (_p, conf, rules) => void wgApplied.push({ conf, rules }),
     wireguardStatus: async () => wgStatus,

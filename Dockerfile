@@ -12,11 +12,13 @@ RUN npm ci --no-audit --no-fund \
 
 # ---- run: Node plus the Docker CLI and Compose plugin Homeport drives ----
 FROM node:22-alpine
-RUN apk add --no-cache docker-cli docker-cli-compose
+RUN apk add --no-cache docker-cli docker-cli-compose \
+ && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 ENV NODE_ENV=production \
     HOMEPORT_IN_CONTAINER=1 \
     HOMEPORT_DATA=/data \
-    HOMEPORT_PORT=8484
+    HOMEPORT_PORT=8484 \
+    DOCKER_CONFIG=/tmp/.docker
 WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=build /app/node_modules ./node_modules

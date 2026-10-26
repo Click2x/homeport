@@ -47,4 +47,8 @@ Not built: the Tailscale/Headscale alternative for people who cannot forward a p
 Same core, via a platform adapter (path resolution, storage tiers, GPU, VPN capabilities, install helper). Storage is simpler there: native filesystems mean most users land in the best tier.
 
 ## Security
-The Docker socket is root-equivalent. Needs first-run admin setup, LAN-only default binding, rate-limited login, an audit log, and a security review before 1.0.
+See [SECURITY.md](../SECURITY.md) for the full picture. The Docker socket is root-equivalent, so Homeport is built to be hard to misuse and honest about what it does not yet do.
+
+Done: a one-time setup code for the first account, scrypt passwords, hashed session tokens, an anti-forgery header and origin check, sign-in lockout, an audit log, secrets encrypted at rest (key kept apart from the database), no shell (argument lists only, with validation of everything that reaches a file or command), local-only publishing by default, a hardened run command that the end-to-end test runs with, and zero known dependency vulnerabilities.
+
+Not done: an independent security review, running as a non-root user, HTTPS of its own, and two-factor sign-in.

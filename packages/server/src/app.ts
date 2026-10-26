@@ -262,7 +262,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       configured: vpnConfigured(store),
       verified: vpnVerified(store),
     });
-    const hostPorts = allocatePorts(catalog, apps, new Set(), s.hostPorts);
+    const hostPorts = await allocatePorts(catalog, apps, new Set(), s.hostPorts);
     return { plan: buildPlan(s, apps, { vpn: d.vpn, hold: d.hold, hostPorts }), decision: d };
   };
   app.get("/api/plan", async () => {

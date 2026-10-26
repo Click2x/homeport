@@ -1,7 +1,7 @@
 import type { Catalog } from "@homeport/core";
 import { resolveApps } from "@homeport/core";
 import type { HomeportConfig } from "./config.js";
-import { containerName, docker } from "./docker.js";
+import { containerName, docker, HELPER_IMAGES } from "./docker.js";
 import { GATEWAY_ID } from "./plan.js";
 
 // ---- the policy: when may the download client start? -------------------------------------------
@@ -209,7 +209,7 @@ export async function collectVpnFacts(project: string, options: CollectOptions =
       "--rm",
       "--network",
       `container:${gatewayName}`,
-      "curlimages/curl",
+      HELPER_IMAGES.curl,
       "-s",
       "--max-time",
       "8",
@@ -267,7 +267,7 @@ export async function breakTunnelTest(
       "--rm",
       "--network",
       `container:${gateway}`,
-      "curlimages/curl",
+      HELPER_IMAGES.curl,
       "-s",
       "--max-time",
       "8",

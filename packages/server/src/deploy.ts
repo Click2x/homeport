@@ -43,6 +43,8 @@ export interface DeployOps {
   syncProfiles(ctx: WireContext, selected: string[], options: WireOptions): Promise<void>;
   wireRequests(ctx: WireContext, selected: string[]): Promise<void>;
   sleep(ms: number): Promise<void>;
+  /** Is a program outside Docker already using this port on the host? */
+  portInUse(port: number): Promise<boolean>;
   /** Build the remote-access sidecar image if it is missing or out of date. */
   ensureWireguardImage(): Promise<unknown>;
   applyWireguard(project: string, conf: string, rules: string): Promise<void>;
@@ -143,11 +145,12 @@ export async function deploy(
 
   // ---- ports ----
   report.start("plan", "Choosing ports and preparing the plan");
-  const hostPorts = allocatePorts(
+  const hostPorts = await allocatePorts(
     catalog,
     stackApps,
     await ops.takenPorts(settings.project),
     settings.hostPorts,
+    ops.portInUse,
   );
   store.setJson(SETTINGS_KEY, { ...settings, hostPorts });
   // Without VPN settings the gateway has nothing to connect to, so it stays off too.

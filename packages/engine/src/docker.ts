@@ -2,6 +2,13 @@ import { execFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+/** Small helper images Homeport runs for one-off jobs, pinned so they behave the same everywhere. */
+export const HELPER_IMAGES = {
+  alpine: "alpine:3.21",
+  curl: "curlimages/curl:8.11.1",
+  recyclarr: "ghcr.io/recyclarr/recyclarr:8.8.0",
+} as const;
+
 /** A Docker command failed. `detail` is the tail of its error output, safe to show the user. */
 export class DockerError extends Error {
   constructor(
@@ -79,7 +86,13 @@ const compose = (p: ComposeProject, ...rest: string[]) => [
   ...rest,
 ];
 
-export const composePull = (p: ComposeProject) => docker(compose(p, "pull", "--quiet"));
+/**
+ * Download the images. A failed download is not fatal here: if an image is already on this computer
+ * (offline, or the registry is rate-limiting) the stack can still start, and if it is really missing,
+ * `composeUp` fails right after with a clear "image not found" message.
+ */
+export const composePull = (p: ComposeProject) =>
+  docker(compose(p, "pull", "--quiet", "--ignore-pull-failures"));
 export const composeUp = (p: ComposeProject) => docker(compose(p, "up", "-d", "--remove-orphans"));
 export const composeDown = (p: ComposeProject, { volumes = false } = {}) =>
   docker(compose(p, "down", "--remove-orphans", ...(volumes ? ["-v"] : [])));
@@ -114,7 +127,7 @@ export async function readQbitFirstRunPassword(
  * Run Recyclarr once against the stack. The config reaches the container through a short-lived
  * named volume, not a host folder, so this behaves the same when Homeport itself runs in a container.
  */
-export async function runRecyclarr(project: string, config: string, image = "ghcr.io/recyclarr/recyclarr:8") {
+export async function runRecyclarr(project: string, config: string, image = HELPER_IMAGES.recyclarr) {
   const volume = `${project}_recyclarr-run`;
   try {
     await docker(
@@ -124,7 +137,7 @@ export async function runRecyclarr(project: string, config: string, image = "ghc
         "-i",
         "-v",
         `${volume}:/config`,
-        "alpine",
+        HELPER_IMAGES.alpine,
         "sh",
         "-c",
         // Recyclarr runs as a non-root user, so this short-lived, private volume must be writable by it.

@@ -12,8 +12,9 @@ const dataDir = process.env.HOMEPORT_DATA ?? (inContainer ? "/data" : join(proce
 const host = process.env.HOMEPORT_HOST ?? "0.0.0.0";
 const port = Number(process.env.HOMEPORT_PORT ?? 8484);
 const here = fileURLToPath(new URL(".", import.meta.url));
-const version = (JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")) as { version: string })
-  .version;
+const version = (
+  JSON.parse(readFileSync(join(here, "..", "..", "..", "package.json"), "utf8")) as { version: string }
+).version;
 
 const store = Store.open(dataDir);
 const needsSetup = store.userCount() === 0;

@@ -79,10 +79,37 @@ async function cleanup() {
   await sh(["volume", "rm", "-f", `${project}_recyclarr-run`]).catch(() => {});
 }
 
+// Which of the usual ports is already taken on this computer (by Docker or by a native program)?
+import { connect } from "node:net";
+const listening = (port) =>
+  new Promise((resolve) => {
+    const s = connect({ port, host: "127.0.0.1" });
+    const done = (v) => {
+      s.destroy();
+      resolve(v);
+    };
+    setTimeout(() => done(false), 800);
+    s.once("connect", () => done(true));
+    s.once("error", () => done(false));
+  });
+const usualPorts = [8096, 8989, 7878, 9696, 5055, 8080, 51820];
+await cleanup();
+const takenBefore = [];
+for (const p of usualPorts) if (await listening(p)) takenBefore.push(p);
+say(`ports already in use before the install: ${takenBefore.join(", ") || "none"}`);
+
 try {
-  await cleanup();
   say(`starting ${image}...`);
-  await sh(["run", "-d", "--name", app, "-p", "127.0.0.1:38484:8484", "-v", "/var/run/docker.sock:/var/run/docker.sock", "-v", `${volume}:/data`, image]);
+  // The same hardening the README recommends: read-only file system, no extra capabilities, no privilege escalation.
+  await sh([
+    "run", "-d", "--name", app,
+    "--read-only", "--tmpfs", "/tmp", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true",
+    "--add-host", "host.docker.internal:host-gateway",
+    "-p", "127.0.0.1:38484:8484",
+    "-v", "/var/run/docker.sock:/var/run/docker.sock",
+    "-v", `${volume}:/data`,
+    image,
+  ]);
   let status;
   for (let i = 0; i < 30 && !status; i++) {
     status = await withTimeout(fetch(`${base}/api/status`).then((r) => r.json(), () => null), 2000);
@@ -122,6 +149,12 @@ try {
 
   const stack = (await api("GET", "/api/stack")).json;
   const ports = stack.deployed?.result?.ports ?? {};
+  const given = Object.values(ports).flatMap((p) => Object.values(p));
+  check(
+    "no app was given a port that something on this computer was already using",
+    given.every((p) => !takenBefore.includes(p)),
+    given.filter((p) => takenBefore.includes(p)).join(", "),
+  );
   const names = stack.containers.map((c) => c.service).sort();
   check("the apps are running", ["jellyfin", "prowlarr", "radarr", "seerr", "sonarr"].every((n) => names.includes(n)), names.join(", "));
   check("the download client is NOT running", !names.includes("qbittorrent"));

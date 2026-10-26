@@ -43,7 +43,15 @@ describe("generateCompose without a VPN", () => {
 
   it("injects API keys as variable references, never literal secrets", () => {
     expect(compose.services.sonarr?.environment?.SONARR__AUTH__APIKEY).toBe("${SONARR_KEY}");
-    expect(composeToYaml(compose)).not.toMatch(/[0-9a-f]{32}/);
+    // Image digests are 64 hex characters and public; anything else that long would be a leaked key.
+    expect(composeToYaml(compose).replace(/sha256:[0-9a-f]{64}/g, "")).not.toMatch(/[0-9a-f]{32}/);
+  });
+
+  it("runs exact, pinned images (a digest), not whatever is newest", () => {
+    for (const [id, s] of Object.entries(compose.services)) {
+      if (id === "wireguard") continue; // built locally by Homeport from its own Dockerfile
+      expect(s.image, id).toMatch(/@sha256:[0-9a-f]{64}$/);
+    }
   });
 
   it("keeps app settings in named volumes and shares one data volume", () => {
@@ -111,8 +119,9 @@ describe("compatibility with the proven spike", () => {
   });
 
   it("uses the same images", () => {
+    // The spike follows ":latest"; the product pins a digest. The repository must be the same.
     for (const [id, s] of Object.entries(spike.services) as [string, { image: string }][])
-      expect(compose.services[id]?.image).toBe(s.image);
+      expect(compose.services[id]?.image.split("@")[0]).toBe(s.image.split(":").slice(0, -1).join(":"));
   });
 
   it("exposes the same container ports and mounts the same container paths", () => {

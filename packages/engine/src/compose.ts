@@ -38,7 +38,10 @@ export function generateCompose(catalog: Catalog, plan: Plan): ComposeFile {
     volumes.data = null;
 
   for (const app of apps) {
-    const service: ComposeService = { image: `${app.image}:${app.tag}`, restart: "unless-stopped" };
+    const service: ComposeService = {
+      image: app.digest ? `${app.image}@${app.digest}` : `${app.image}:${app.tag}`,
+      restart: "unless-stopped",
+    };
     if (app.init) service.init = true;
 
     const environment: Record<string, string> = {};

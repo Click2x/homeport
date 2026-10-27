@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/banner.svg" alt="Homeport" width="100%"></p>
+
 # Homeport
 
 **One friendly place to roll out your whole media stack and home services, already wired together.**
@@ -9,6 +11,23 @@ Homeport is a **standalone product**: it needs no account, no cloud service and 
 > ## Status: alpha (0.1.0), released as a pre-release.
 >
 > The app works end to end for **one goal** (watch movies and shows) on **Windows with Docker Desktop**, and its end-to-end tests also pass on Linux (Docker Engine on GitHub's Ubuntu runners): you open a web page, create an account, pick what you want, and Homeport installs and connects everything and shows you a dashboard. The image is published and signed on GitHub's container registry. It has **not had a security review**, so do not expose it to the internet. macOS and real Linux hardware (home servers, NAS boxes, Raspberry Pi) have not been tried. See the [changelog](CHANGELOG.md) for what is in 0.1.0 and its known limitations.
+
+## A look inside
+
+<p align="center">
+  <img src="docs/images/choose-dark.png" alt="Choose what you want to do" width="49%">
+  <img src="docs/images/plan-dark.png" alt="Plain-language plan of what will be installed" width="49%">
+</p>
+<p align="center">
+  <img src="docs/images/storage-light.png" alt="Storage check" width="49%">
+  <img src="docs/images/remote-light.png" alt="Remote access with WireGuard" width="49%">
+</p>
+<p align="center">
+  <img src="docs/images/choose-light.png" alt="Light theme" width="62%">
+  <img src="docs/images/mobile.png" alt="Works on a phone" width="22%">
+</p>
+
+Light and dark themes, and it works on a phone.
 
 ## Try it
 

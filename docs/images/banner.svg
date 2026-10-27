@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="Homeport: one friendly place to roll out your whole media stack">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1219"/>
+      <stop offset="1" stop-color="#12303d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" rx="20" fill="url(#bg)"/>
+  <rect x="140" y="90" width="140" height="140" rx="32" fill="#4cc3e0"/>
+  <g fill="none" stroke="#0b1219" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="210" cy="123" r="11"/>
+    <path d="M210 134v82M180 160h60M166 188c4 20 22 30 44 30s40-10 44-30"/>
+  </g>
+  <text x="320" y="178" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="84" font-weight="700" fill="#f1f5f9">Homeport</text>
+  <text x="324" y="228" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="30" fill="#9db4c0">Your whole media stack, already wired together.</text>
+</svg>

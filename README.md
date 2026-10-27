@@ -8,7 +8,7 @@ Homeport is a **standalone product**: it needs no account, no cloud service and 
 
 > ## Status: alpha (0.1.0). Not released yet.
 >
-> The app works end to end for **one goal** (watch movies and shows) on **Windows with Docker Desktop**: you open a web page, create an account, pick what you want, and Homeport installs and connects everything and shows you a dashboard. There is **no published image yet**, so you build it yourself (below). It has **not had a security review**, so do not expose it to the internet. Linux and macOS are untested. See the [changelog](CHANGELOG.md) for what is in 0.1.0 and its known limitations.
+> The app works end to end for **one goal** (watch movies and shows) on **Windows with Docker Desktop**, and its end-to-end tests also pass on Linux (Docker Engine on GitHub's Ubuntu runners): you open a web page, create an account, pick what you want, and Homeport installs and connects everything and shows you a dashboard. There is **no published image yet**, so you build it yourself (below). It has **not had a security review**, so do not expose it to the internet. macOS and real Linux hardware (home servers, NAS boxes, Raspberry Pi) have not been tried. See the [changelog](CHANGELOG.md) for what is in 0.1.0 and its known limitations.
 
 ## Try the preview
 
@@ -52,7 +52,7 @@ All of that is covered by 223 automated tests plus end-to-end scripts that run t
 - **Remote access has only been tested on one computer**, with WireGuard clients on the same Docker network, not with a real phone through a real router. It needs a router you can forward a UDP port on, and it will not work behind carrier-grade NAT (common on mobile and some shared connections). The Tailscale alternative and automatic router port opening are not built.
 - **A published image and automated releases.** You build from source for now.
 - **Only one goal.** Photo backup, ad blocking, smart home and other services are planned as community-extensible manifests.
-- **Linux and macOS** are untested. **Docker Desktop for Windows** is the only tested platform.
+- **Platforms.** Docker Desktop for Windows is the platform it is built and used on. The full end-to-end suite also passes on Docker Engine on Ubuntu in GitHub Actions, which shows the approach works on Linux, but nobody has run it on real Linux hardware yet. macOS is untested.
 - **No security review yet**, and the container runs as root with the Docker socket.
 - A connected VPN tunnel has only been tested against a real ProtonVPN WireGuard account in the original proof of concept, not through the new interface.
 - Recyclarr uses a minimal profile config. Indexers are not configured; you add your own.
@@ -106,7 +106,7 @@ A manifest is a short YAML file, so adding a service to the catalog needs no cod
 
 ## Tested with
 
-App images are **pinned to exact digests** in [`packages/core/manifests`](packages/core/manifests), so every install gets the versions that were tested: Prowlarr 2.6.5.5623, Sonarr 4.0.20.3014, Radarr 6.4.4.10685, qBittorrent 5.3.0, Jellyfin 12.3.0, Seerr 3.5.1, Recyclarr 8.8.0 and gluetun (the 2026-10-19 build), on Docker Desktop 29 for Windows. Updating them is a deliberate, tested change.
+App images are **pinned to exact digests** in [`packages/core/manifests`](packages/core/manifests), so every install gets the versions that were tested: Prowlarr 2.6.5.5623, Sonarr 4.0.20.3014, Radarr 6.4.4.10685, qBittorrent 5.3.0, Jellyfin 12.3.0, Seerr 3.5.1, Recyclarr 8.8.0 and gluetun (the 2026-10-19 build), on Docker Desktop 29 for Windows (and Docker Engine on Ubuntu in CI). Updating them is a deliberate, tested change.
 
 ## The original proof of concept
 

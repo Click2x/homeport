@@ -44,7 +44,7 @@ Built (see `packages/engine/src/wireguard*.ts` and `docker/wireguard`). The shap
 Not built: the Tailscale/Headscale alternative for people who cannot forward a port, automatic router port opening, and a reverse proxy with HTTPS for friends who will not install an app.
 
 ## Linux
-Same core, via a platform adapter (path resolution, storage tiers, GPU, VPN capabilities, install helper). Storage is simpler there: native filesystems mean most users land in the best tier.
+The whole end-to-end suite (full install through the real image, real WireGuard clients, the VPN gate) passes on Docker Engine on Ubuntu in GitHub Actions, so the approach holds there. It has not been tried on real Linux hardware or with GPUs, and the platform adapter below is still a design. The idea: the same core, via a platform adapter (path resolution, storage tiers, GPU, VPN capabilities, install helper). Storage is simpler there: native filesystems mean most users land in the best tier.
 
 ## Security
 See [SECURITY.md](../SECURITY.md) for the full picture. The Docker socket is root-equivalent, so Homeport is built to be hard to misuse and honest about what it does not yet do.

@@ -6,8 +6,8 @@ versions follow [Semantic Versioning](https://semver.org). Anything before 1.0 m
 ## [0.1.0] - Unreleased
 
 The first version of the real app. It is an **alpha**: it works end to end for one goal on Windows with
-Docker Desktop, but it has not had a security review and has not been tested on Linux, macOS or with a real
-phone through a real router.
+Docker Desktop (and in Linux CI), but it has not had a security review and has not been tried on macOS, on real
+Linux hardware, or with a real phone through a real router.
 
 ### Added
 - A guided web interface: first-run account with a one-time setup code, goal picker, plain-language plan,
@@ -33,7 +33,7 @@ phone through a real router.
 
 ### Known limitations
 - Alpha: no security review yet; the container runs as root with access to the Docker socket.
-- Only Docker Desktop for Windows has been tested.
+- Docker Desktop for Windows is the platform it is built on. The end-to-end suite also passes on Docker Engine on Ubuntu in GitHub Actions, but it has not been tried on real Linux hardware (home servers, NAS, Raspberry Pi) or on macOS.
 - Remote access has not been tested with a real phone through a real router, and does not work behind
   carrier-grade NAT. The Tailscale alternative and automatic router port opening are not built.
 - One goal (watch movies and shows). More services are planned as community manifests.

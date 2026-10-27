@@ -6,19 +6,16 @@ Homeport takes a complete beginner from "I have Docker Desktop" to a working Son
 
 Homeport is a **standalone product**: it needs no account, no cloud service and no other software besides Docker. The intended experience is described in [`docs/UX.md`](docs/UX.md).
 
-> ## Status: alpha (0.1.0). Not released yet.
+> ## Status: alpha (0.1.0), released as a pre-release.
 >
-> The app works end to end for **one goal** (watch movies and shows) on **Windows with Docker Desktop**, and its end-to-end tests also pass on Linux (Docker Engine on GitHub's Ubuntu runners): you open a web page, create an account, pick what you want, and Homeport installs and connects everything and shows you a dashboard. There is **no published image yet**, so you build it yourself (below). It has **not had a security review**, so do not expose it to the internet. macOS and real Linux hardware (home servers, NAS boxes, Raspberry Pi) have not been tried. See the [changelog](CHANGELOG.md) for what is in 0.1.0 and its known limitations.
+> The app works end to end for **one goal** (watch movies and shows) on **Windows with Docker Desktop**, and its end-to-end tests also pass on Linux (Docker Engine on GitHub's Ubuntu runners): you open a web page, create an account, pick what you want, and Homeport installs and connects everything and shows you a dashboard. The image is published and signed on GitHub's container registry. It has **not had a security review**, so do not expose it to the internet. macOS and real Linux hardware (home servers, NAS boxes, Raspberry Pi) have not been tried. See the [changelog](CHANGELOG.md) for what is in 0.1.0 and its known limitations.
 
-## Try the preview
+## Try it
 
 You need **Docker** (Docker Desktop on Windows or macOS, or Docker Engine with Compose v2 on Linux). The first install downloads several GB of images.
 
 ```bash
-git clone https://github.com/Click2x/homeport.git
-cd homeport
-docker build -t homeport .
-docker run -d --name homeport --restart unless-stopped --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true --add-host host.docker.internal:host-gateway -p 127.0.0.1:8484:8484 -v /var/run/docker.sock:/var/run/docker.sock -v homeport-data:/data homeport
+docker run -d --name homeport --restart unless-stopped --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true --add-host host.docker.internal:host-gateway -p 127.0.0.1:8484:8484 -v /var/run/docker.sock:/var/run/docker.sock -v homeport-data:/data ghcr.io/click2x/homeport:0.1.0
 docker logs homeport
 ```
 
@@ -33,6 +30,8 @@ Open <http://localhost:8484> and enter the setup code printed in the log (it loo
 The download client (qBittorrent) **only starts behind a VPN that Homeport has tested and confirmed works**. During setup you add your VPN provider's details (for WireGuard you paste the file your provider gives you). Until a VPN works, everything else is set up and downloads simply stay off. If the VPN drops later, the gateway's firewall stops the client's traffic rather than letting it leak.
 
 There is deliberately no button to turn this off. If you decide to download without a VPN, you must edit one line in `homeport.toml` by hand (the app shows you how). You are responsible for what you download and for the laws that apply to you.
+
+To build it yourself instead, clone this repository and run `docker build -t homeport .`, then use `homeport` in place of the image name above.
 
 ## What works
 
@@ -50,7 +49,6 @@ All of that is covered by 223 automated tests plus end-to-end scripts that run t
 ## What does not work yet
 
 - **Remote access has only been tested on one computer**, with WireGuard clients on the same Docker network, not with a real phone through a real router. It needs a router you can forward a UDP port on, and it will not work behind carrier-grade NAT (common on mobile and some shared connections). The Tailscale alternative and automatic router port opening are not built.
-- **A published image and automated releases.** You build from source for now.
 - **Only one goal.** Photo backup, ad blocking, smart home and other services are planned as community-extensible manifests.
 - **Platforms.** Docker Desktop for Windows is the platform it is built and used on. The full end-to-end suite also passes on Docker Engine on Ubuntu in GitHub Actions, which shows the approach works on Linux, but nobody has run it on real Linux hardware yet. macOS is untested.
 - **No security review yet**, and the container runs as root with the Docker socket.
@@ -61,7 +59,7 @@ All of that is covered by 223 automated tests plus end-to-end scripts that run t
 ## Roadmap to a first release
 
 1. Test remote access with a real phone and router, and add the Tailscale alternative for connections that cannot forward a port.
-2. A published, versioned, signed image, continuous integration, and pinned app versions.
+2. Keep the pinned app versions current with tested updates (the nightly end-to-end run watches for breakage).
 3. A security review and hardening (non-root, narrower Docker access).
 4. Linux and macOS testing.
 5. More goals and services as community manifests.

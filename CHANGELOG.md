@@ -3,7 +3,7 @@
 All notable changes to Homeport. The format follows [Keep a Changelog](https://keepachangelog.com), and
 versions follow [Semantic Versioning](https://semver.org). Anything before 1.0 may change between versions.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-26
 
 The first version of the real app. It is an **alpha**: it works end to end for one goal on Windows with
 Docker Desktop (and in Linux CI), but it has not had a security review and has not been tried on macOS, on real
